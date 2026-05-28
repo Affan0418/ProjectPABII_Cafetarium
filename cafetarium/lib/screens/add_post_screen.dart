@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:cafetarium/screens/map_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +10,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:http/http.dart' as http;
+
 
 class AddPostScreen extends StatefulWidget {
   const AddPostScreen({super.key});
@@ -89,7 +91,10 @@ class _AddPostScreenState extends State<AddPostScreen> {
           {
             "parts": [
               {
-                "inlineData": {"mimeType": "image/jpeg", "data": base64Image},
+                "inlineData": {
+                  "mimeType": "image/jpeg",
+                  "data": base64Image,
+                },
               },
               {
                 "text":
@@ -106,7 +111,10 @@ class _AddPostScreenState extends State<AddPostScreen> {
 
       final response = await http.post(
         Uri.parse(url),
-        headers: {'x-goog-api-key': apiKey, 'Content-Type': 'application/json'},
+        headers: {
+          'x-goog-api-key': apiKey,
+          'Content-Type': 'application/json',
+        },
         body: body,
       );
 
@@ -123,11 +131,37 @@ class _AddPostScreenState extends State<AddPostScreen> {
         }
       } else {
         debugPrint('AI request failed: ${response.body}');
+        if (mounted) {
+          _showMessage('AI gagal membuat deskripsi');
+        }
       }
     } catch (e) {
       debugPrint('Gagal generate AI description: $e');
+      if (mounted) {
+        _showMessage('Gagal generate deskripsi AI');
+      }
     } finally {
       if (mounted) setState(() => _isGenerating = false);
+    }
+  }
+
+  Future<void> _openMapPicker() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const MapScreen(
+          isPickingLocation: true,
+        ),
+      ),
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        _latitude = result['latitude'];
+        _longitude = result['longitude'];
+      });
+
+      _showMessage('Lokasi cafe berhasil dipilih');
     }
   }
 
@@ -265,9 +299,9 @@ class _AddPostScreenState extends State<AddPostScreen> {
   void _showMessage(String message) {
     if (!mounted) return;
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   @override
@@ -317,14 +351,12 @@ class _AddPostScreenState extends State<AddPostScreen> {
                 ],
               ),
             ),
-
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   children: [
                     const SizedBox(height: 28),
-
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -370,9 +402,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
                         ),
                       ),
                     ),
-
                     const SizedBox(height: 18),
-
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -410,9 +440,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 16),
-
                     Container(
                       height: 135,
                       padding: const EdgeInsets.symmetric(
@@ -450,7 +478,6 @@ class _AddPostScreenState extends State<AddPostScreen> {
                               ),
                             ),
                     ),
-
                     Align(
                       alignment: Alignment.centerRight,
                       child: Text(
@@ -458,9 +485,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
                         style: const TextStyle(color: Colors.grey),
                       ),
                     ),
-
                     const SizedBox(height: 10),
-
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -488,8 +513,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
                               Expanded(
                                 child: Text(
                                   _latitude == null
-                                      ? 'Cari lokasi atau gunakan lokasi saat ini'
-                                      : 'Lokasi berhasil ditambahkan',
+                                      ? 'Cari lokasi cafe di map'
+                                      : 'Lokasi berhasil dipilih',
                                   style: TextStyle(
                                     color: _latitude == null
                                         ? Colors.grey
@@ -499,7 +524,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
                                 ),
                               ),
                               TextButton(
-                                onPressed: _getLocation,
+                                onPressed: _openMapPicker,
                                 child: const Text(
                                   'Cari',
                                   style: TextStyle(
@@ -513,9 +538,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
                         ),
                       ],
                     ),
-
                     const SizedBox(height: 58),
-
                     SizedBox(
                       width: double.infinity,
                       height: 52,
