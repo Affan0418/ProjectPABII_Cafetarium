@@ -82,7 +82,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
 
       const apiKey = 'AIzaSyCThCfT0EsXybQFpePVqYlGL7_kUNx-iwI';
       const url =
-          'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent';
+          'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
 
       final body = jsonEncode({
         "contents": [
@@ -123,9 +123,18 @@ class _AddPostScreenState extends State<AddPostScreen> {
         }
       } else {
         debugPrint('AI request failed: ${response.body}');
+        debugPrint('AI response body: ${response.body}');
+
+        if (mounted) {
+          _showMessage('AI gagal membuat deskripsi');
+        }
       }
     } catch (e) {
       debugPrint('Gagal generate AI description: $e');
+
+      if (mounted) {
+        _showMessage('Gagal generate deskripsi AI: $e');
+      }
     } finally {
       if (mounted) setState(() => _isGenerating = false);
     }
