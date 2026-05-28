@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "516644085951",
+    "project_id": "cafetarium-database",
+    "storage_bucket": "cafetarium-database.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:516644085951:android:c14662e729f9e14618660a",
+        "android_client_info": {
+          "package_name": "com.example.cafetarium"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCFuGSFpDZRzZXixbj6dD43kEmFJT4-j94"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
