@@ -1,3 +1,4 @@
+import 'package:cafetarium/screens/detail_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -54,6 +55,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Color getStatusColor(String status) {
     if (status.toLowerCase() == 'ramai') {
+      return Colors.red;
+    }
+    if (status.toLowerCase() == 'sedang') {
       return Colors.orange;
     }
     return Colors.green;
@@ -162,10 +166,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
                       return GestureDetector(
                         onTap: () {
-                          Navigator.pushNamed(
+                          Navigator.push(
                             context,
-                            '/detail',
-                            arguments: cafe.id,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  DetailScreen(cafeId: cafe.id),
+                            ),
                           );
                         },
                         child: Container(
