@@ -19,16 +19,32 @@ class _SearchScreenState extends State<SearchScreen> {
   static const Color primaryBrown = Color(0xff9b6a43);
   static const Color bgColor = Color(0xfff3e8ec);
 
-  Color _getStatusColor(String status) {
-    if (status.toLowerCase() == 'ramai') return Colors.red;
-    if (status.toLowerCase() == 'sedang') return Colors.orange;
-    return Colors.green;
-  }
-
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+  }
+
+  Widget buildCafeImage(String? imageBase64) {
+    if (imageBase64 != null && imageBase64.isNotEmpty) {
+      return Image.memory(
+        base64Decode(imageBase64),
+        width: 78,
+        height: 78,
+        fit: BoxFit.cover,
+      );
+    }
+
+    return Container(
+      width: 78,
+      height: 78,
+      color: Colors.grey.shade400,
+      child: const Icon(
+        Icons.local_cafe,
+        size: 34,
+        color: Colors.black87,
+      ),
+    );
   }
 
   @override
@@ -155,7 +171,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       final data = cafe.data() as Map<String, dynamic>;
 
                       final String name = data['name'] ?? 'Nama Cafe';
-                      final String status = data['status'] ?? 'Sepi';
+                      final String description = data['description'] ?? '';
                       final double rating =
                           (data['rating'] ?? 0).toDouble();
                       final String? imageBase64 = data['image'];
@@ -172,8 +188,8 @@ class _SearchScreenState extends State<SearchScreen> {
                           );
                         },
                         child: Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(10),
+                          margin: const EdgeInsets.only(bottom: 14),
+                          padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: Colors.grey.shade300,
                             borderRadius: BorderRadius.circular(10),
@@ -181,24 +197,11 @@ class _SearchScreenState extends State<SearchScreen> {
                           child: Row(
                             children: [
                               ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: imageBase64 != null &&
-                                        imageBase64.isNotEmpty
-                                    ? Image.memory(
-                                        base64Decode(imageBase64),
-                                        width: 70,
-                                        height: 70,
-                                        fit: BoxFit.cover,
-                                      )
-                                    : Container(
-                                        width: 70,
-                                        height: 70,
-                                        color: Colors.grey.shade400,
-                                        child: const Icon(Icons.local_cafe),
-                                      ),
+                                borderRadius: BorderRadius.circular(9),
+                                child: buildCafeImage(imageBase64),
                               ),
 
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 14),
 
                               Expanded(
                                 child: Column(
@@ -210,33 +213,42 @@ class _SearchScreenState extends State<SearchScreen> {
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 15,
+                                        fontSize: 16,
                                       ),
                                     ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      status,
-                                      style: TextStyle(
-                                        color: _getStatusColor(status),
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
+
+                                    const SizedBox(height: 6),
+
+                                    if (description.isNotEmpty)
+                                      Text(
+                                        description,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey.shade700,
+                                        ),
                                       ),
-                                    ),
                                   ],
                                 ),
                               ),
 
-                              Row(
+                              const SizedBox(width: 10),
+
+                              Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   const Icon(
                                     Icons.star,
                                     color: Colors.orange,
-                                    size: 18,
+                                    size: 22,
                                   ),
+                                  const SizedBox(height: 3),
                                   Text(
                                     rating.toStringAsFixed(1),
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
+                                      fontSize: 14,
                                     ),
                                   ),
                                 ],

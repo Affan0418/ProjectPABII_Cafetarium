@@ -17,51 +17,64 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Map<String, dynamic>? userData;
   bool isLoading = true;
 
-//   @override
-//   void initState() {
-//     super.initState();
-//     getUserData();
-//   }
+  int favoriteCount = 0;
+  int reviewCount = 0;
+  int postCount = 0;
 
-@override
-void initState() {
-  super.initState();
+  static const Color brown = Color(0xff9B6B43);
+  static const Color background = Color(0xffF5ECE9);
 
-  // DATA DUMMY UNTUK TEST UI
-  userData = {
-    "name": "Ariq Cafe Owner",
-    "email": "ariq@gmail.com",
-    "role": "owner",
-    "favoriteCount": 12,
-    "reviewCount": 8,
-    "postCount": 5,
-    "profileImage": ""
-  };
+  @override
+  void initState() {
+    super.initState();
+    getProfileData();
+  }
 
-  isLoading = false;
-}
-
-  Future<void> getUserData() async {
+  Future<void> getProfileData() async {
     try {
-      User? user = _auth.currentUser;
+      final User? user = _auth.currentUser;
 
-      if (user != null) {
-        DocumentSnapshot doc =
-            await _firestore.collection('users').doc(user.uid).get();
-
-        if (doc.exists) {
-          setState(() {
-            userData = doc.data() as Map<String, dynamic>;
-            isLoading = false;
-          });
-        } else {
-          setState(() {
-            isLoading = false;
-          });
-        }
+      if (user == null) {
+        setState(() {
+          isLoading = false;
+        });
+        return;
       }
+
+      final userDoc = await _firestore.collection('users').doc(user.uid).get();
+
+      final favSnapshot = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .collection('favorites')
+          .get();
+
+      final cafeSnapshot = await _firestore
+          .collection('cafes')
+          .where('ownerId', isEqualTo: user.uid)
+          .get();
+
+      final reviewSnapshot = await _firestore
+          .collectionGroup('reviews')
+          .where('userId', isEqualTo: user.uid)
+          .get();
+
+      setState(() {
+        userData = userDoc.data() ??
+            {
+              'fullName': user.displayName ?? 'User',
+              'email': user.email ?? '-',
+              'role': 'user',
+              'profileImage': '',
+            };
+
+        favoriteCount = favSnapshot.docs.length;
+        postCount = cafeSnapshot.docs.length;
+        reviewCount = reviewSnapshot.docs.length;
+        isLoading = false;
+      });
     } catch (e) {
-      debugPrint(e.toString());
+      debugPrint('Profile error: $e');
       setState(() {
         isLoading = false;
       });
@@ -72,7 +85,7 @@ void initState() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xffF5ECE9),
+        backgroundColor: background,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
@@ -85,15 +98,19 @@ void initState() {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xff9B6B43),
+              backgroundColor: brown,
             ),
             onPressed: () async {
               await _auth.signOut();
 
-              if (context.mounted) {
-                Navigator.pop(context);
-                Navigator.pushReplacementNamed(context, '/login');
-              }
+              if (!context.mounted) return;
+
+              Navigator.pop(context);
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/signin',
+                (route) => false,
+              );
             },
             child: const Text(
               "Logout",
@@ -107,46 +124,70 @@ void initState() {
 
   @override
   Widget build(BuildContext context) {
-    const brown = Color(0xff9B6B43);
-    const background = Color(0xffF5ECE9);
-
     if (isLoading) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        backgroundColor: background,
+        body: Center(
+          child: CircularProgressIndicator(color: brown),
+        ),
       );
     }
 
-    String name = userData?['name'] ?? "User";
-    String email = userData?['email'] ?? "-";
-    String image = userData?['profileImage'] ?? "";
-    String role = userData?['role'] ?? "user";
+    final User? user = _auth.currentUser;
 
-    int fav = userData?['favoriteCount'] ?? 0;
-    int review = userData?['reviewCount'] ?? 0;
-    int post = role == "owner" ? (userData?['postCount'] ?? 0) : 0;
+    if (user == null) {
+      return Scaffold(
+        backgroundColor: background,
+        body: Center(
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: brown),
+            onPressed: () {
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                '/signin',
+                (route) => false,
+              );
+            },
+            child: const Text(
+              'Login kembali',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final String name =
+        userData?['fullName'] ??
+        userData?['name'] ??
+        user.displayName ??
+        'User';
+
+    final String email = userData?['email'] ?? user.email ?? '-';
+    final String image = userData?['profileImage'] ?? '';
+    final String role = userData?['role'] ?? 'user';
 
     return Scaffold(
       backgroundColor: background,
       body: SafeArea(
         child: Column(
           children: [
-            // HEADER
             Container(
-              height: 80,
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              decoration: const BoxDecoration(
+              height: 78,
+              margin: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
                 color: brown,
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(25),
-                  bottomRight: Radius.circular(25),
-                ),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
                 children: [
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.arrow_back_ios_new,
-                        color: Colors.white),
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new,
+                      color: Colors.white,
+                    ),
                   ),
                   const Expanded(
                     child: Center(
@@ -154,7 +195,7 @@ void initState() {
                         "Profile",
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: 28,
+                          fontSize: 24,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -169,28 +210,30 @@ void initState() {
               child: SingleChildScrollView(
                 child: Column(
                   children: [
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 20),
 
-                    // FOTO
                     CircleAvatar(
-                      radius: 75,
+                      radius: 68,
                       backgroundColor: Colors.white,
                       backgroundImage: image.isNotEmpty
                           ? CachedNetworkImageProvider(image)
                           : null,
                       child: image.isEmpty
-                          ? const Icon(Icons.person,
-                              size: 70, color: Colors.grey)
+                          ? const Icon(
+                              Icons.person,
+                              size: 68,
+                              color: Colors.grey,
+                            )
                           : null,
                     ),
 
                     const SizedBox(height: 18),
 
-                    // NAMA
                     Text(
                       name,
+                      textAlign: TextAlign.center,
                       style: const TextStyle(
-                        fontSize: 30,
+                        fontSize: 28,
                         fontWeight: FontWeight.bold,
                         color: brown,
                       ),
@@ -203,16 +246,17 @@ void initState() {
                       style: const TextStyle(
                         color: brown,
                         fontWeight: FontWeight.w600,
-                        fontSize: 18,
+                        fontSize: 16,
                       ),
                     ),
 
                     const SizedBox(height: 10),
 
-                    // 👇 ROLE BADGE
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 6),
+                        horizontal: 14,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: role == "owner"
                             ? Colors.amber.shade700
@@ -232,57 +276,59 @@ void initState() {
 
                     Divider(color: Colors.brown.shade200),
 
-                    // STATISTIK
                     Padding(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 15, vertical: 10),
+                        horizontal: 15,
+                        vertical: 10,
+                      ),
                       child: Row(
                         children: [
-                          statItem(Icons.favorite, fav.toString(), "Favorit"),
+                          statItem(
+                            Icons.favorite,
+                            favoriteCount.toString(),
+                            "Favorit",
+                          ),
                           divider(),
-                          statItem(Icons.star, review.toString(), "Review"),
+                          statItem(
+                            Icons.star,
+                            reviewCount.toString(),
+                            "Review",
+                          ),
                           divider(),
-                          statItem(Icons.add_circle, post.toString(),
-                              "Postingan"),
+                          statItem(
+                            Icons.add_circle,
+                            postCount.toString(),
+                            "Postingan",
+                          ),
                         ],
                       ),
                     ),
 
                     Divider(color: Colors.brown.shade200),
 
-                    // MENU
-                    menuTile(Icons.account_circle, "Akun Saya", () {
-                      Navigator.pushNamed(context, '/akun');
-                    }),
+                    menuTile(Icons.account_circle, "Akun Saya", () {}),
+                    menuTile(Icons.history, "Riwayat Postingan", () {}),
+                    menuTile(Icons.info, "Tentang Aplikasi", () {}),
 
-                    menuTile(Icons.history, "Riwayat Postingan", () {
-                      Navigator.pushNamed(context, '/riwayat-postingan');
-                    }),
+                    const SizedBox(height: 50),
 
-                    menuTile(Icons.info, "Tentang Aplikasi", () {
-                      Navigator.pushNamed(context, '/about');
-                    }),
-
-                    const SizedBox(height: 70),
-
-                    // LOGOUT
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 25),
                       child: SizedBox(
                         width: double.infinity,
-                        height: 65,
+                        height: 58,
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: brown,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(22),
+                              borderRadius: BorderRadius.circular(18),
                             ),
                           ),
                           onPressed: logout,
                           child: const Text(
                             "Keluar",
                             style: TextStyle(
-                              fontSize: 22,
+                              fontSize: 20,
                               fontWeight: FontWeight.bold,
                               color: Colors.white,
                             ),
@@ -304,7 +350,7 @@ void initState() {
 
   Widget divider() {
     return Container(
-      height: 60,
+      height: 58,
       width: 1,
       color: Colors.brown.shade200,
     );
@@ -314,16 +360,24 @@ void initState() {
     return Expanded(
       child: Column(
         children: [
-          Icon(icon, size: 38, color: const Color(0xff9B6B43)),
+          Icon(icon, size: 34, color: brown),
           const SizedBox(height: 8),
           Text(
-            "$value $title",
+            value,
             style: const TextStyle(
-              color: Color(0xff9B6B43),
+              color: brown,
               fontWeight: FontWeight.bold,
-              fontSize: 16,
+              fontSize: 18,
             ),
-          )
+          ),
+          Text(
+            title,
+            style: const TextStyle(
+              color: brown,
+              fontWeight: FontWeight.w600,
+              fontSize: 13,
+            ),
+          ),
         ],
       ),
     );
@@ -335,20 +389,20 @@ void initState() {
         ListTile(
           onTap: onTap,
           leading: CircleAvatar(
-            backgroundColor: const Color(0xff9B6B43),
+            backgroundColor: brown,
             child: Icon(icon, color: Colors.white),
           ),
           title: Text(
             title,
             style: const TextStyle(
-              color: Color(0xff9B6B43),
-              fontSize: 18,
+              color: brown,
+              fontSize: 17,
               fontWeight: FontWeight.bold,
             ),
           ),
           trailing: const Icon(
             Icons.chevron_right,
-            color: Color(0xff9B6B43),
+            color: brown,
           ),
         ),
         Divider(color: Colors.brown.shade200),
