@@ -1,9 +1,10 @@
+import 'dart:convert';
+
+import 'package:cafetarium/screens/add_post_screen.dart';
 import 'package:cafetarium/screens/detail_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:cafetarium/screens/add_post_screen.dart';
-import 'dart:convert';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,8 +23,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> getUserLocation() async {
-    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) return;
 
     LocationPermission permission = await Geolocator.checkPermission();
@@ -32,9 +32,14 @@ class _HomeScreenState extends State<HomeScreen> {
       permission = await Geolocator.requestPermission();
     }
 
-    if (permission == LocationPermission.deniedForever) return;
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      return;
+    }
 
     final position = await Geolocator.getCurrentPosition();
+
+    if (!mounted) return;
 
     setState(() {
       userPosition = position;
@@ -53,14 +58,26 @@ class _HomeScreenState extends State<HomeScreen> {
         1000;
   }
 
-  Color getStatusColor(String status) {
-    if (status.toLowerCase() == 'ramai') {
-      return Colors.red;
+  Widget buildCafeImage(String? imageBase64) {
+    if (imageBase64 != null && imageBase64.isNotEmpty) {
+      return Image.memory(
+        base64Decode(imageBase64),
+        width: 78,
+        height: 78,
+        fit: BoxFit.cover,
+      );
     }
-    if (status.toLowerCase() == 'sedang') {
-      return Colors.orange;
-    }
-    return Colors.green;
+
+    return Container(
+      width: 78,
+      height: 78,
+      color: Colors.grey.shade400,
+      child: const Icon(
+        Icons.local_cafe,
+        size: 34,
+        color: Colors.black87,
+      ),
+    );
   }
 
   @override
@@ -73,7 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               margin: const EdgeInsets.all(10),
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.symmetric(vertical: 14),
               decoration: BoxDecoration(
                 color: const Color(0xff9b6a43),
                 borderRadius: BorderRadius.circular(8),
@@ -99,7 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
-                    vertical: 10,
+                    vertical: 13,
                   ),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade300,
@@ -107,13 +124,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   child: const Row(
                     children: [
-                      Icon(Icons.search, size: 20),
-                      SizedBox(width: 8),
+                      Icon(Icons.search, size: 22),
+                      SizedBox(width: 10),
                       Text(
                         'Search Cafes..',
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
-                          fontSize: 13,
+                          fontSize: 14,
                         ),
                       ),
                     ],
@@ -122,7 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
 
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
@@ -154,14 +171,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     itemBuilder: (context, index) {
                       final cafe = cafes[index];
                       final data = cafe.data() as Map<String, dynamic>;
+
                       final String? imageBase64 = data['image'];
                       final String name = data['name'] ?? 'Nama Cafe';
-                      final String status = data['status'] ?? 'Sepi';
+                      final String description = data['description'] ?? '';
                       final double rating = (data['rating'] ?? 0).toDouble();
 
                       final double lat = (data['latitude'] ?? 0).toDouble();
                       final double lng = (data['longitude'] ?? 0).toDouble();
-
                       final double distance = calculateDistance(lat, lng);
 
                       return GestureDetector(
@@ -175,34 +192,20 @@ class _HomeScreenState extends State<HomeScreen> {
                           );
                         },
                         child: Container(
-                          margin: const EdgeInsets.only(bottom: 12),
+                          margin: const EdgeInsets.only(bottom: 14),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: Colors.grey.shade300,
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(10),
                           ),
                           child: Row(
                             children: [
                               ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child:
-                                    imageBase64 != null &&
-                                        imageBase64.isNotEmpty
-                                    ? Image.memory(
-                                        base64Decode(imageBase64),
-                                        width: 70,
-                                        height: 70,
-                                        fit: BoxFit.cover,
-                                      )
-                                    : Container(
-                                        width: 70,
-                                        height: 70,
-                                        color: Colors.grey.shade400,
-                                        child: const Icon(Icons.local_cafe),
-                                      ),
+                                borderRadius: BorderRadius.circular(9),
+                                child: buildCafeImage(imageBase64),
                               ),
 
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 14),
 
                               Expanded(
                                 child: Column(
@@ -214,24 +217,40 @@ class _HomeScreenState extends State<HomeScreen> {
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        fontSize: 15,
+                                        fontSize: 16,
                                       ),
                                     ),
+
+                                    const SizedBox(height: 6),
+
+                                    if (description.isNotEmpty)
+                                      Text(
+                                        description,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey.shade700,
+                                        ),
+                                      ),
+
                                     const SizedBox(height: 8),
+
                                     Row(
                                       children: [
-                                        Icon(
-                                          Icons.circle,
-                                          color: getStatusColor(status),
-                                          size: 9,
+                                        const Icon(
+                                          Icons.location_on,
+                                          size: 15,
+                                          color: Color(0xff9b6a43),
                                         ),
-                                        const SizedBox(width: 5),
+                                        const SizedBox(width: 3),
                                         Text(
-                                          status,
-                                          style: TextStyle(
-                                            color: getStatusColor(status),
-                                            fontWeight: FontWeight.bold,
+                                          userPosition == null
+                                              ? 'Mengambil lokasi...'
+                                              : '${distance.toStringAsFixed(1)} km',
+                                          style: const TextStyle(
                                             fontSize: 12,
+                                            fontWeight: FontWeight.w500,
                                           ),
                                         ),
                                       ],
@@ -240,34 +259,23 @@ class _HomeScreenState extends State<HomeScreen> {
                                 ),
                               ),
 
+                              const SizedBox(width: 10),
+
                               Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
+                                mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.star,
-                                        color: Colors.orange,
-                                        size: 18,
-                                      ),
-                                      const Icon(
-                                        Icons.star,
-                                        color: Colors.orange,
-                                        size: 18,
-                                      ),
-                                      const SizedBox(width: 3),
-                                      Text(
-                                        rating.toStringAsFixed(1),
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
+                                  const Icon(
+                                    Icons.star,
+                                    color: Colors.orange,
+                                    size: 22,
                                   ),
-                                  const SizedBox(height: 18),
+                                  const SizedBox(height: 3),
                                   Text(
-                                    '${distance.toStringAsFixed(1)} km',
-                                    style: const TextStyle(fontSize: 11),
+                                    rating.toStringAsFixed(1),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -283,12 +291,15 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
+
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xff9b6a43),
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const AddPostScreen()),
+            MaterialPageRoute(
+              builder: (context) => const AddPostScreen(),
+            ),
           );
         },
         child: const Icon(Icons.add, color: Colors.white),

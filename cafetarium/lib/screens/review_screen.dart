@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image_picker/image_picker.dart';
@@ -76,9 +76,29 @@ class _ReviewScreenState extends State<ReviewScreen> {
           .collection('cafes')
           .doc(widget.cafeId);
 
+      final user = FirebaseAuth.instance.currentUser;
+      print('CURRENT USER: ${user?.uid}');
+      print('CURRENT EMAIL: ${user?.email}');
+
+      if (user == null) {
+        _showMessage('Silakan login terlebih dahulu');
+        return;
+      }
+
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      final String userName =
+          userDoc.data()?['fullName'] ??
+          user.displayName ??
+          user.email?.split('@').first ??
+          'User';
+
       await cafeRef.collection('reviews').add({
-        'userId': 'guest_user',
-        'userName': 'Guest',
+        'userId': user.uid,
+        'userName': userName,
         'rating': _selectedRating,
         'comment': _commentController.text.trim(),
         'image': _base64Image,

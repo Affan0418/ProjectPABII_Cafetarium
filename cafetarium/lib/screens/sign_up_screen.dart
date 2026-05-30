@@ -1,4 +1,6 @@
 import 'package:cafetarium/screens/sign_in_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class SignUpScreen extends StatefulWidget {
@@ -9,14 +11,11 @@ class SignUpScreen extends StatefulWidget {
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
-  final TextEditingController usernameController =
-      TextEditingController();
+  final TextEditingController usernameController = TextEditingController();
 
-  final TextEditingController emailController =
-      TextEditingController();
+  final TextEditingController emailController = TextEditingController();
 
-  final TextEditingController passwordController =
-      TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
 
   bool isHidden = true;
 
@@ -32,9 +31,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        title: const Text(
-          'Create Account',
-        ),
+        title: const Text('Create Account'),
       ),
 
       body: SingleChildScrollView(
@@ -44,11 +41,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
           children: [
             const SizedBox(height: 20),
 
-            const Icon(
-              Icons.coffee,
-              size: 90,
-              color: primaryBrown,
-            ),
+            const Icon(Icons.coffee, size: 90, color: primaryBrown),
 
             const SizedBox(height: 20),
 
@@ -115,9 +108,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   },
 
                   icon: Icon(
-                    isHidden
-                        ? Icons.visibility_off
-                        : Icons.visibility,
+                    isHidden ? Icons.visibility_off : Icons.visibility,
                   ),
                 ),
 
@@ -146,22 +137,37 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   ),
                 ),
 
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Account Created Successfully',
-                      ),
-                    ),
-                  );
+                onPressed: () async {
+                  try {
+                    final credential = await FirebaseAuth.instance
+                        .createUserWithEmailAndPassword(
+                          email: emailController.text.trim(),
+                          password: passwordController.text.trim(),
+                        );
 
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          const SignInScreen(),
-                    ),
-                  );
+                    await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(credential.user!.uid)
+                        .set({
+                          'fullName': usernameController.text.trim(),
+                          'email': emailController.text.trim(),
+                          'createdAt': DateTime.now(),
+                        });
+
+                    if (!context.mounted) return;
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Account Created Successfully'),
+                      ),
+                    );
+
+                    Navigator.pushReplacementNamed(context, '/signin');
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Sign up gagal: $e')),
+                    );
+                  }
                 },
 
                 child: const Text(

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:cafetarium/screens/review_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -26,73 +27,19 @@ class DetailScreen extends StatelessWidget {
     }
   }
 
-  Color _getStatusColor(String status) {
-    if (status.toLowerCase() == 'ramai') return Colors.red;
-    if (status.toLowerCase() == 'sedang') return Colors.orange;
-    return Colors.green;
-  }
-
-  Future<void> _checkInWithExpired(BuildContext context, String cafeId) async {
-    final cafeRef = FirebaseFirestore.instance.collection('cafes').doc(cafeId);
-
-    final String visitorId = 'guest_${DateTime.now().millisecondsSinceEpoch}';
-
-    await cafeRef.collection('visitors').doc(visitorId).set({
-      'userId': visitorId,
-      'isHere': true,
-      'checkedInAt': Timestamp.now(),
-    });
-
-    await _updateActiveVisitorCount(cafeRef);
-
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Kamu tercatat berada di cafe ini selama 2 jam'),
-        ),
-      );
-    }
-  }
-
-  Future<void> _updateActiveVisitorCount(DocumentReference cafeRef) async {
-    final visitorsSnapshot = await cafeRef.collection('visitors').get();
-
-    final DateTime now = DateTime.now();
-    int activeVisitors = 0;
-
-    for (final doc in visitorsSnapshot.docs) {
-      final data = doc.data() as Map<String, dynamic>;
-
-      if (data['checkedInAt'] == null) continue;
-
-      final DateTime checkedInAt = (data['checkedInAt'] as Timestamp).toDate();
-
-      final Duration difference = now.difference(checkedInAt);
-
-      if (difference.inMinutes < 120) {
-        activeVisitors++;
-      }
-    }
-
-    String status = 'Sepi';
-
-    if (activeVisitors >= 5) {
-      status = 'Ramai';
-    } else if (activeVisitors >= 1) {
-      status = 'Sedang';
-    }
-
-    await cafeRef.update({
-      'visitorCount': activeVisitors,
-      'status': status,
-      'lastVisitorUpdate': Timestamp.now(),
-    });
-  }
-
   Future<void> _toggleFavorite(BuildContext context, String cafeId) async {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Silakan login terlebih dahulu')),
+      );
+      return;
+    }
+
     final favoriteRef = FirebaseFirestore.instance
         .collection('users')
-        .doc(currentUserId)
+        .doc(user.uid)
         .collection('favorites')
         .doc(cafeId);
 
@@ -118,10 +65,23 @@ class DetailScreen extends StatelessWidget {
   }
 
   Widget _buildFavoriteButton(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      return GestureDetector(
+        onTap: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Silakan login terlebih dahulu')),
+          );
+        },
+        child: const Icon(Icons.favorite_border, color: Colors.red, size: 30),
+      );
+    }
+
     return StreamBuilder<DocumentSnapshot>(
       stream: FirebaseFirestore.instance
           .collection('users')
-          .doc(currentUserId)
+          .doc(user.uid)
           .collection('favorites')
           .doc(cafeId)
           .snapshots(),
@@ -137,13 +97,6 @@ class DetailScreen extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(10),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
             ),
             child: Icon(
               isFavorite ? Icons.favorite : Icons.favorite_border,
@@ -181,10 +134,8 @@ class DetailScreen extends StatelessWidget {
 
             final data = snapshot.data!.data() as Map<String, dynamic>;
 
-            final int visitorCount = data['visitorCount'] ?? 0;
             final String name = data['name'] ?? 'Nama Cafe';
             final String description = data['description'] ?? '';
-            final String status = data['status'] ?? 'Sepi';
             final double rating = (data['rating'] ?? 0).toDouble();
             final double latitude = (data['latitude'] ?? 0).toDouble();
             final double longitude = (data['longitude'] ?? 0).toDouble();
@@ -292,7 +243,7 @@ class DetailScreen extends StatelessWidget {
                               const SizedBox(width: 5),
                               Expanded(
                                 child: Text(
-                                  'Buka lokasi di Google Maps',
+                                  'Lihat Lokasi Cafe di Google Maps',
                                   style: TextStyle(
                                     fontSize: 13,
                                     color: Colors.blue.shade700,
@@ -318,66 +269,6 @@ class DetailScreen extends StatelessWidget {
 
                         const SizedBox(height: 14),
 
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 12,
-                          ),
-                          decoration: BoxDecoration(
-                            color: boxColor,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              const Text(
-                                'Status: ',
-                                style: TextStyle(fontSize: 14),
-                              ),
-                              Text(
-                                status,
-                                style: TextStyle(
-                                  color: _getStatusColor(status),
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '$visitorCount orang aktif',
-                                style: const TextStyle(fontSize: 13),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 14),
-
-                        SizedBox(
-                          width: double.infinity,
-                          height: 52,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              _checkInWithExpired(context, cafeId);
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: primaryBrown,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(9),
-                              ),
-                            ),
-                            child: const Text(
-                              'Saya di sini',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 16),
 
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
