@@ -6,11 +6,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:http/http.dart' as http;
-
 
 class AddPostScreen extends StatefulWidget {
   const AddPostScreen({super.key});
@@ -33,8 +31,6 @@ class _AddPostScreenState extends State<AddPostScreen> {
   double? _latitude;
   double? _longitude;
 
-  String? _aiDescription;
-
   static const Color primaryBrown = Color(0xff9b6a43);
   static const Color bgColor = Color(0xfff3e8ec);
   static const Color boxColor = Color(0xffeee4e8);
@@ -43,16 +39,15 @@ class _AddPostScreenState extends State<AddPostScreen> {
     try {
       final pickedFile = await _picker.pickImage(source: source);
 
-      if (pickedFile != null) {
-        setState(() {
-          _image = File(pickedFile.path);
-          _aiDescription = null;
-          _descriptionController.clear();
-        });
+      if (pickedFile == null) return;
 
-        await _compressAndEncodeImage();
-        await _generateDescriptionWithAI();
-      }
+      setState(() {
+        _image = File(pickedFile.path);
+        _descriptionController.clear();
+      });
+
+      await _compressAndEncodeImage();
+      await _generateDescriptionWithAI();
     } catch (e) {
       _showMessage('Gagal memilih gambar: $e');
     }
@@ -66,7 +61,12 @@ class _AddPostScreenState extends State<AddPostScreen> {
       quality: 55,
     );
 
-    if (compressedImage == null) return;
+    if (compressedImage == null) {
+      _showMessage('Gagal mengompres gambar');
+      return;
+    }
+
+    if (!mounted) return;
 
     setState(() {
       _base64Image = base64Encode(compressedImage);
@@ -82,19 +82,16 @@ class _AddPostScreenState extends State<AddPostScreen> {
       final imageBytes = await _image!.readAsBytes();
       final base64Image = base64Encode(imageBytes);
 
-      const apiKey = 'AIzaSyCThCfT0EsXybQFpePVqYlGL7_kUNx-iwI';
+      const apiKey = 'ISI DISINI API KEY GOOGLE GENERATIVE AI';
       const url =
-          'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+          'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent';
 
       final body = jsonEncode({
         "contents": [
           {
             "parts": [
               {
-                "inlineData": {
-                  "mimeType": "image/jpeg",
-                  "data": base64Image,
-                },
+                "inlineData": {"mimeType": "image/jpeg", "data": base64Image},
               },
               {
                 "text":
@@ -111,29 +108,27 @@ class _AddPostScreenState extends State<AddPostScreen> {
 
       final response = await http.post(
         Uri.parse(url),
-        headers: {
-          'x-goog-api-key': apiKey,
-          'Content-Type': 'application/json',
-        },
+        headers: {'x-goog-api-key': apiKey, 'Content-Type': 'application/json'},
         body: body,
       );
+
+      if (!mounted) return;
 
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body);
         final text =
-            jsonResponse['candidates'][0]['content']['parts'][0]['text'];
+            jsonResponse['candidates']?[0]?['content']?['parts']?[0]?['text'];
 
         if (text != null && text.toString().trim().isNotEmpty) {
           setState(() {
-            _aiDescription = text.toString().trim();
-            _descriptionController.text = _aiDescription!;
+            _descriptionController.text = text.toString().trim();
           });
         }
       } else {
-        debugPrint('AI request failed: ${response.body}');
-        if (mounted) {
-          _showMessage('AI gagal membuat deskripsi');
-        }
+        debugPrint('AI status code: ${response.statusCode}');
+        debugPrint('AI response body: ${response.body}');
+
+        _showMessage('AI gagal: ${response.statusCode}');
       }
     } catch (e) {
       debugPrint('Gagal generate AI description: $e');
@@ -149,9 +144,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const MapScreen(
-          isPickingLocation: true,
-        ),
+        builder: (context) => const MapScreen(isPickingLocation: true),
       ),
     );
 
@@ -162,44 +155,6 @@ class _AddPostScreenState extends State<AddPostScreen> {
       });
 
       _showMessage('Lokasi cafe berhasil dipilih');
-    }
-  }
-
-  Future<void> _getLocation() async {
-    try {
-      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-
-      if (!serviceEnabled) {
-        _showMessage('GPS belum aktif');
-        return;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-
-      if (permission == LocationPermission.denied ||
-          permission == LocationPermission.deniedForever) {
-        _showMessage('Izin lokasi ditolak');
-        return;
-      }
-
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-        ),
-      );
-
-      setState(() {
-        _latitude = position.latitude;
-        _longitude = position.longitude;
-      });
-
-      _showMessage('Lokasi berhasil ditambahkan');
-    } catch (e) {
-      _showMessage('Gagal mengambil lokasi: $e');
     }
   }
 
@@ -224,21 +179,26 @@ class _AddPostScreenState extends State<AddPostScreen> {
       return;
     }
 
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      _showMessage('Silakan login terlebih dahulu');
+      return;
+    }
+
     setState(() => _isUploading = true);
 
     try {
-      final uid = FirebaseAuth.instance.currentUser?.uid;
-
       await FirebaseFirestore.instance.collection('cafes').add({
         'name': _cafeNameController.text.trim(),
         'image': _base64Image,
         'caption': _descriptionController.text.trim(),
         'description': _descriptionController.text.trim(),
         'rating': 0.0,
-        'status': 'Sepi',
+        'reviewCount': 0,
         'latitude': _latitude,
         'longitude': _longitude,
-        'ownerId': uid,
+        'ownerId': user.uid,
         'createdAt': Timestamp.now(),
       });
 
@@ -246,15 +206,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
 
       _showMessage('Postingan cafe berhasil dibuat');
 
-      setState(() {
-        _image = null;
-        _base64Image = null;
-        _latitude = null;
-        _longitude = null;
-        _aiDescription = null;
-        _cafeNameController.clear();
-        _descriptionController.clear();
-      });
+      Navigator.pushReplacementNamed(context, '/home');
     } catch (e) {
       _showMessage('Gagal membuat postingan: $e');
     } finally {
@@ -299,8 +251,30 @@ class _AddPostScreenState extends State<AddPostScreen> {
   void _showMessage(String message) {
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Widget _sectionTitle(String title, String subtitle) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          subtitle,
+          style: const TextStyle(fontSize: 12, color: Colors.grey),
+        ),
+        const SizedBox(height: 8),
+      ],
     );
   }
 
@@ -351,12 +325,14 @@ class _AddPostScreenState extends State<AddPostScreen> {
                 ],
               ),
             ),
+
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   children: [
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 24),
+
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -366,7 +342,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
                       child: GestureDetector(
                         onTap: _showImageSourceDialog,
                         child: Container(
-                          height: 86,
+                          height: 95,
                           width: double.infinity,
                           decoration: BoxDecoration(
                             color: Colors.grey,
@@ -384,17 +360,12 @@ class _AddPostScreenState extends State<AddPostScreen> {
                               : const Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(
-                                      Icons.add,
-                                      size: 38,
-                                      color: Colors.black,
-                                    ),
+                                    Icon(Icons.add, size: 38),
                                     SizedBox(height: 2),
                                     Text(
                                       'Unggah Foto',
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.black,
                                       ),
                                     ),
                                   ],
@@ -402,24 +373,16 @@ class _AddPostScreenState extends State<AddPostScreen> {
                         ),
                       ),
                     ),
+
                     const SizedBox(height: 18),
+
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        _sectionTitle(
                           'Nama Cafe',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        const Text(
                           'Tulis nama cafe tanpa kata "cafe" di depan',
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
                         ),
-                        const SizedBox(height: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14),
                           decoration: BoxDecoration(
@@ -440,7 +403,9 @@ class _AddPostScreenState extends State<AddPostScreen> {
                         ),
                       ],
                     ),
+
                     const SizedBox(height: 16),
+
                     Container(
                       height: 135,
                       padding: const EdgeInsets.symmetric(
@@ -478,6 +443,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
                               ),
                             ),
                     ),
+
                     Align(
                       alignment: Alignment.centerRight,
                       child: Text(
@@ -485,19 +451,16 @@ class _AddPostScreenState extends State<AddPostScreen> {
                         style: const TextStyle(color: Colors.grey),
                       ),
                     ),
+
                     const SizedBox(height: 10),
+
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        _sectionTitle(
                           'Lokasi Cafe',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
-                          ),
+                          'Pilih titik lokasi cafe melalui peta',
                         ),
-                        const SizedBox(height: 10),
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 14,
@@ -538,7 +501,9 @@ class _AddPostScreenState extends State<AddPostScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 58),
+
+                    const SizedBox(height: 48),
+
                     SizedBox(
                       width: double.infinity,
                       height: 52,
@@ -569,6 +534,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
                               ),
                       ),
                     ),
+
+                    const SizedBox(height: 24),
                   ],
                 ),
               ),

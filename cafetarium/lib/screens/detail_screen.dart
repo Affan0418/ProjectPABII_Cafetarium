@@ -109,6 +109,41 @@ class DetailScreen extends StatelessWidget {
     );
   }
 
+  void _showFullImage(BuildContext context, String imageBase64) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.9),
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(12),
+          child: Stack(
+            children: [
+              Center(
+                child: InteractiveViewer(
+                  minScale: 0.8,
+                  maxScale: 4,
+                  child: Image.memory(
+                    base64Decode(imageBase64),
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 10,
+                right: 10,
+                child: IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close, color: Colors.white, size: 32),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -181,21 +216,55 @@ class DetailScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(10),
-                          child: imageBase64 != null && imageBase64.isNotEmpty
-                              ? Image.memory(
-                                  base64Decode(imageBase64),
-                                  width: double.infinity,
-                                  height: 135,
-                                  fit: BoxFit.cover,
-                                )
-                              : Container(
-                                  width: double.infinity,
-                                  height: 135,
-                                  color: Colors.grey.shade300,
-                                  child: const Icon(Icons.local_cafe, size: 50),
+                        GestureDetector(
+                          onTap: () {
+                            if (imageBase64 != null && imageBase64.isNotEmpty) {
+                              _showFullImage(context, imageBase64);
+                            }
+                          },
+                          child: Stack(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(10),
+                                child:
+                                    imageBase64 != null &&
+                                        imageBase64.isNotEmpty
+                                    ? Image.memory(
+                                        base64Decode(imageBase64),
+                                        width: double.infinity,
+                                        height: 150,
+                                        fit: BoxFit.cover,
+                                      )
+                                    : Container(
+                                        width: double.infinity,
+                                        height: 150,
+                                        color: Colors.grey.shade300,
+                                        child: const Icon(
+                                          Icons.local_cafe,
+                                          size: 50,
+                                        ),
+                                      ),
+                              ),
+
+                              if (imageBase64 != null && imageBase64.isNotEmpty)
+                                Positioned(
+                                  right: 10,
+                                  bottom: 10,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(7),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.55),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(
+                                      Icons.zoom_out_map,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                  ),
                                 ),
+                            ],
+                          ),
                         ),
 
                         const SizedBox(height: 10),
@@ -268,7 +337,6 @@ class DetailScreen extends StatelessWidget {
                           ),
 
                         const SizedBox(height: 14),
-
 
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
