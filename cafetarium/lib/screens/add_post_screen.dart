@@ -82,7 +82,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
       final imageBytes = await _image!.readAsBytes();
       final base64Image = base64Encode(imageBytes);
 
-      const apiKey = 'ISI DISINI API KEY GOOGLE GENERATIVE AI';
+      const apiKey = 'AQ.Ab8RN6I-5qd_ZuC4of4fyuijppBaE-cpd0XVNK0hwDnZxEYSYQ';
       const url =
           'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent';
 
