@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:cafetarium/screens/main_screen.dart';
 import 'package:cafetarium/screens/map_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -91,7 +92,10 @@ class _AddPostScreenState extends State<AddPostScreen> {
           {
             "parts": [
               {
-                "inlineData": {"mimeType": "image/jpeg", "data": base64Image},
+                "inlineData": {
+                  "mimeType": "image/jpeg",
+                  "data": base64Image,
+                },
               },
               {
                 "text":
@@ -108,7 +112,10 @@ class _AddPostScreenState extends State<AddPostScreen> {
 
       final response = await http.post(
         Uri.parse(url),
-        headers: {'x-goog-api-key': apiKey, 'Content-Type': 'application/json'},
+        headers: {
+          'x-goog-api-key': apiKey,
+          'Content-Type': 'application/json',
+        },
         body: body,
       );
 
@@ -127,7 +134,6 @@ class _AddPostScreenState extends State<AddPostScreen> {
       } else {
         debugPrint('AI status code: ${response.statusCode}');
         debugPrint('AI response body: ${response.body}');
-
         _showMessage('AI gagal: ${response.statusCode}');
       }
     } catch (e) {
@@ -137,6 +143,31 @@ class _AddPostScreenState extends State<AddPostScreen> {
       }
     } finally {
       if (mounted) setState(() => _isGenerating = false);
+    }
+  }
+
+  Future<void> _sendNotificationToTopic(String cafeName) async {
+    try {
+      const String vercelUrl =
+          'https://cafetarium-cloud.vercel.app/send-to-topic';
+
+      final response = await http.post(
+        Uri.parse(vercelUrl),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'topic': 'cafes',
+          'title': '☕ Cafe Baru!',
+          'body': '$cafeName baru saja ditambahkan di Cafetarium.',
+          'senderName': 'Cafetarium',
+        }),
+      );
+
+      debugPrint('Notification status: ${response.statusCode}');
+      debugPrint('Notification response: ${response.body}');
+    } catch (e) {
+      debugPrint('Gagal mengirim notifikasi: $e');
     }
   }
 
@@ -189,8 +220,10 @@ class _AddPostScreenState extends State<AddPostScreen> {
     setState(() => _isUploading = true);
 
     try {
+      final cafeName = _cafeNameController.text.trim();
+
       await FirebaseFirestore.instance.collection('cafes').add({
-        'name': _cafeNameController.text.trim(),
+        'name': cafeName,
         'image': _base64Image,
         'caption': _descriptionController.text.trim(),
         'description': _descriptionController.text.trim(),
@@ -202,11 +235,19 @@ class _AddPostScreenState extends State<AddPostScreen> {
         'createdAt': Timestamp.now(),
       });
 
+      await _sendNotificationToTopic(cafeName);
+
       if (!mounted) return;
 
       _showMessage('Postingan cafe berhasil dibuat');
 
-      Navigator.pushReplacementNamed(context, '/home');
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const MainScreen(role: 'Owner'),
+        ),
+        (route) => false,
+      );
     } catch (e) {
       _showMessage('Gagal membuat postingan: $e');
     } finally {
@@ -251,9 +292,9 @@ class _AddPostScreenState extends State<AddPostScreen> {
   void _showMessage(String message) {
     if (!mounted) return;
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   Widget _sectionTitle(String title, String subtitle) {

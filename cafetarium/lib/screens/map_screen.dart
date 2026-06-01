@@ -116,17 +116,11 @@ class _MapScreenState extends State<MapScreen> {
                     const SizedBox(height: 6),
                     Row(
                       children: [
-                        const Icon(
-                          Icons.star,
-                          color: Colors.orange,
-                          size: 18,
-                        ),
+                        const Icon(Icons.star, color: Colors.orange, size: 18),
                         const SizedBox(width: 4),
                         Text(
                           rating.toStringAsFixed(1),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -309,20 +303,23 @@ class _MapScreenState extends State<MapScreen> {
     }
 
     return Positioned(
-      top: widget.showBackButton ? 14 : 14,
+      top: 14,
       left: 14,
       right: 14,
       child: Column(
         children: [
           Container(
-            height: 44,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            height: 50,
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: Colors.grey.shade300,
+                width: 1,
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.18),
+                  color: Colors.black.withOpacity(0.16),
                   blurRadius: 12,
                   offset: const Offset(0, 5),
                 ),
@@ -331,6 +328,10 @@ class _MapScreenState extends State<MapScreen> {
             child: TextField(
               controller: searchController,
               textAlignVertical: TextAlignVertical.center,
+              style: const TextStyle(
+                fontSize: 14,
+                height: 1.2,
+              ),
               onChanged: (value) {
                 setState(() {
                   searchQuery = value.trim().toLowerCase();
@@ -339,15 +340,20 @@ class _MapScreenState extends State<MapScreen> {
               decoration: InputDecoration(
                 border: InputBorder.none,
                 hintText: 'Cari cafe di map...',
-                isDense: true,
+                hintStyle: const TextStyle(
+                  fontSize: 14,
+                  height: 1.2,
+                  color: Colors.black54,
+                ),
                 contentPadding: const EdgeInsets.symmetric(vertical: 14),
                 prefixIcon: const Icon(
                   Icons.search,
                   color: primaryBrown,
+                  size: 22,
                 ),
                 prefixIconConstraints: const BoxConstraints(
-                  minWidth: 40,
-                  minHeight: 40,
+                  minWidth: 44,
+                  minHeight: 50,
                 ),
                 suffixIcon: searchController.text.isNotEmpty
                     ? IconButton(
@@ -605,6 +611,7 @@ class _MapScreenState extends State<MapScreen> {
                 _buildMarkerLayer(),
               ],
             ),
+
             _buildTopSearchBar(),
             _buildZoomButtons(),
             _buildPickLocationButton(),
