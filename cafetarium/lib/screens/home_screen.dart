@@ -58,20 +58,15 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget buildCafeImage(String? imageBase64) {
-    if (imageBase64 != null && imageBase64.isNotEmpty) {
-      return Image.memory(
-        base64Decode(imageBase64),
-        width: 78,
-        height: 78,
-        fit: BoxFit.cover,
-      );
+    if (imageBase64 == null || imageBase64.isEmpty) {
+      return const SizedBox.shrink();
     }
 
-    return Container(
+    return Image.memory(
+      base64Decode(imageBase64),
       width: 78,
       height: 78,
-      color: Colors.grey.shade400,
-      child: const Icon(Icons.local_cafe, size: 34, color: Colors.black87),
+      fit: BoxFit.cover,
     );
   }
 
