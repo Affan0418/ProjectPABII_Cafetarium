@@ -6,7 +6,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class FavoriteScreen extends StatelessWidget {
-  const FavoriteScreen({super.key});
+  final bool showBackButton;
+
+  const FavoriteScreen({
+    super.key,
+    this.showBackButton = false,
+  });
 
   static const Color primaryBrown = Color(0xff9b6a43);
   static const Color bgColor = Color(0xfff3e8ec);
@@ -33,6 +38,46 @@ class FavoriteScreen extends StatelessWidget {
         Icons.local_cafe,
         size: 34,
         color: Colors.black87,
+      ),
+    );
+  }
+
+  Widget buildHeader(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      decoration: BoxDecoration(
+        color: primaryBrown,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          if (showBackButton)
+            InkWell(
+              onTap: () => Navigator.pop(context),
+              child: const Icon(
+                Icons.arrow_back,
+                color: Colors.white,
+              ),
+            )
+          else
+            const SizedBox(width: 24),
+
+          const Expanded(
+            child: Center(
+              child: Text(
+                'Favorite Cafe',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 17,
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(width: 24),
+        ],
       ),
     );
   }
@@ -70,25 +115,7 @@ class FavoriteScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            Container(
-              margin: const EdgeInsets.all(12),
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              decoration: BoxDecoration(
-                color: primaryBrown,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Center(
-                child: Text(
-                  'Favorite Cafe',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 17,
-                  ),
-                ),
-              ),
-            ),
+            buildHeader(context),
 
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
@@ -208,9 +235,7 @@ class FavoriteScreen extends StatelessWidget {
                                     borderRadius: BorderRadius.circular(9),
                                     child: buildCafeImage(imageBase64),
                                   ),
-
                                   const SizedBox(width: 14),
-
                                   Expanded(
                                     child: Column(
                                       crossAxisAlignment:
@@ -225,9 +250,7 @@ class FavoriteScreen extends StatelessWidget {
                                             fontSize: 16,
                                           ),
                                         ),
-
                                         const SizedBox(height: 6),
-
                                         if (description.isNotEmpty)
                                           Text(
                                             description,
@@ -241,9 +264,7 @@ class FavoriteScreen extends StatelessWidget {
                                       ],
                                     ),
                                   ),
-
                                   const SizedBox(width: 10),
-
                                   Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
