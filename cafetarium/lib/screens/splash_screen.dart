@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:cafetarium/screens/sign_in_screen.dart';
 import 'package:flutter/material.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -10,22 +9,13 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-
   @override
   void initState() {
     super.initState();
 
-    Timer(
-      const Duration(seconds: 3),
-      () {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const SignInScreen(),
-          ),
-        );
-      },
-    );
+    Timer(const Duration(seconds: 3), () {
+      Navigator.pushReplacementNamed(context, '/role');
+    });
   }
 
   @override
@@ -39,11 +29,7 @@ class _SplashScreenState extends State<SplashScreen> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
 
-            colors: [
-              Color(0xff6f4e37),
-              Color(0xffa67b5b),
-              Color(0xffd9b99b),
-            ],
+            colors: [Color(0xff6f4e37), Color(0xffa67b5b), Color(0xffd9b99b)],
           ),
         ),
 
@@ -59,11 +45,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 shape: BoxShape.circle,
               ),
 
-              child: const Icon(
-                Icons.coffee,
-                size: 90,
-                color: Colors.white,
-              ),
+              child: const Icon(Icons.coffee, size: 90, color: Colors.white),
             ),
 
             const SizedBox(height: 30),
@@ -82,17 +64,12 @@ class _SplashScreenState extends State<SplashScreen> {
 
             const Text(
               'Find Your Cozy Coffee Place',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 16,
-              ),
+              style: TextStyle(color: Colors.white70, fontSize: 16),
             ),
 
             const SizedBox(height: 50),
 
-            const CircularProgressIndicator(
-              color: Colors.white,
-            ),
+            const CircularProgressIndicator(color: Colors.white),
           ],
         ),
       ),

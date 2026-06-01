@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'screens/home_screen.dart';
+import 'screens/splash_screen.dart';
+import 'screens/role_selection_screen.dart';
 import 'screens/sign_in_screen.dart';
 import 'screens/sign_up_screen.dart';
+import 'screens/main_screen.dart';
 import 'screens/search_screen.dart';
 import 'screens/favorite_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   runApp(const MyApp());
 }
@@ -25,12 +25,12 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
 
-      initialRoute: '/signin',
+      initialRoute: '/splash',
 
       routes: {
-        '/signin': (context) => const SignInScreen(),
+        '/splash': (context) => const SplashScreen(),
+        '/role': (context) => const RoleSelectionScreen(),
         '/signup': (context) => const SignUpScreen(),
-        '/home': (context) => const HomeScreen(),
         '/search': (context) => const SearchScreen(),
         '/favorite': (context) => const FavoriteScreen(),
       },

@@ -1,10 +1,12 @@
-import 'package:cafetarium/screens/home_screen.dart';
 import 'package:cafetarium/screens/sign_up_screen.dart';
+import 'package:cafetarium/screens/main_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class SignInScreen extends StatefulWidget {
-  const SignInScreen({super.key});
+  final String role;
+
+  const SignInScreen({super.key, required this.role});
 
   @override
   State<SignInScreen> createState() => _SignInScreenState();
@@ -39,11 +41,11 @@ class _SignInScreenState extends State<SignInScreen> {
               ),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
+                children: [
                   Icon(Icons.coffee, size: 100, color: Colors.white),
                   SizedBox(height: 20),
                   Text(
-                    'Welcome Back',
+                    '${widget.role} Login',
                     style: TextStyle(
                       fontSize: 34,
                       fontWeight: FontWeight.bold,
@@ -126,7 +128,13 @@ class _SignInScreenState extends State<SignInScreen> {
 
                           if (!context.mounted) return;
 
-                          Navigator.pushReplacementNamed(context, '/home');
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  MainScreen(role: widget.role),
+                            ),
+                          );
                         } catch (e) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(content: Text('Login gagal: $e')),
