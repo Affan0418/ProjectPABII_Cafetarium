@@ -1,4 +1,4 @@
-import 'package:cafetarium/screens/sign_in_screen.dart';
+import 'package:cafetarium/screens/sign_up_screen.dart';
 import 'package:flutter/material.dart';
 
 class RoleSelectionScreen extends StatelessWidget {
@@ -48,7 +48,7 @@ class RoleSelectionScreen extends StatelessWidget {
                     context,
                     MaterialPageRoute(
                       builder: (context) =>
-                          const SignInScreen(role: 'Customer'),
+                          const SignUpScreen(role: 'Customer'),
                     ),
                   );
                 },
@@ -129,7 +129,7 @@ class RoleSelectionScreen extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const SignInScreen(role: 'Owner'),
+                      builder: (context) => const SignUpScreen(role: 'Owner'),
                     ),
                   );
                 },

@@ -1,10 +1,13 @@
+import 'package:cafetarium/screens/main_screen.dart';
 import 'package:cafetarium/screens/sign_in_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class SignUpScreen extends StatefulWidget {
-  const SignUpScreen({super.key});
+  final String role;
+
+  const SignUpScreen({super.key, required this.role});
 
   @override
   State<SignUpScreen> createState() => _SignUpScreenState();
@@ -151,7 +154,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         .set({
                           'fullName': usernameController.text.trim(),
                           'email': emailController.text.trim(),
-                          'createdAt': DateTime.now(),
+                          'role': widget.role,
+                          'createdAt': Timestamp.now(),
                         });
 
                     if (!context.mounted) return;

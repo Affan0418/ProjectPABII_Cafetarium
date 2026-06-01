@@ -72,11 +72,7 @@ class _HomeScreenState extends State<HomeScreen> {
       width: 78,
       height: 78,
       color: Colors.grey.shade400,
-      child: const Icon(
-        Icons.local_cafe,
-        size: 34,
-        color: Colors.black87,
-      ),
+      child: const Icon(Icons.local_cafe, size: 34, color: Colors.black87),
     );
   }
 
@@ -290,19 +286,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-      ),
-
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: const Color(0xff9b6a43),
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const AddPostScreen(),
-            ),
-          );
-        },
-        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }

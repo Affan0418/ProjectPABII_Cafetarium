@@ -1,5 +1,6 @@
 import 'package:cafetarium/screens/sign_up_screen.dart';
 import 'package:cafetarium/screens/main_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -120,19 +121,28 @@ class _SignInScreenState extends State<SignInScreen> {
                       ),
                       onPressed: () async {
                         try {
-                          await FirebaseAuth.instance
+                          final credential = await FirebaseAuth.instance
                               .signInWithEmailAndPassword(
                                 email: emailController.text.trim(),
                                 password: passwordController.text.trim(),
                               );
+
+                          final uid = credential.user!.uid;
+
+                          final userDoc = await FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(uid)
+                              .get();
+
+                          final String role =
+                              userDoc.data()?['role'] ?? 'Customer';
 
                           if (!context.mounted) return;
 
                           Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
-                              builder: (context) =>
-                                  MainScreen(role: widget.role),
+                              builder: (context) => MainScreen(role: role),
                             ),
                           );
                         } catch (e) {
@@ -161,12 +171,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
                       GestureDetector(
                         onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const SignUpScreen(),
-                            ),
-                          );
+                          Navigator.pushNamed(context, '/role');
                         },
                         child: const Text(
                           'Sign Up',
