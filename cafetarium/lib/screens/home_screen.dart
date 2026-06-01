@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:cafetarium/screens/add_post_screen.dart';
 import 'package:cafetarium/screens/detail_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';

@@ -5,7 +5,6 @@ import 'screens/splash_screen.dart';
 import 'screens/role_selection_screen.dart';
 import 'screens/sign_in_screen.dart';
 import 'screens/sign_up_screen.dart';
-import 'screens/main_screen.dart';
 import 'screens/search_screen.dart';
 import 'screens/favorite_screen.dart';
 import 'screens/map_screen.dart';
