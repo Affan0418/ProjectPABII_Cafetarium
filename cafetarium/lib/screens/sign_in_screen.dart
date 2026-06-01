@@ -2,6 +2,7 @@ import 'package:cafetarium/screens/main_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class SignInScreen extends StatefulWidget {
   final String role;
@@ -127,6 +128,14 @@ class _SignInScreenState extends State<SignInScreen> {
                               );
 
                           final uid = credential.user!.uid;
+
+                          final token = await FirebaseMessaging.instance
+                              .getToken();
+
+                          await FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(uid)
+                              .update({'fcmToken': token});
 
                           final userDoc = await FirebaseFirestore.instance
                               .collection('users')

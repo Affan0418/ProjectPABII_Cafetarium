@@ -16,9 +16,7 @@ final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
     FlutterLocalNotificationsPlugin();
 
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 }
 
 Future<void> setupNotification() async {
@@ -31,8 +29,9 @@ Future<void> setupNotification() async {
   const AndroidInitializationSettings androidSettings =
       AndroidInitializationSettings('@mipmap/ic_launcher');
 
-  const InitializationSettings initializationSettings =
-      InitializationSettings(android: androidSettings);
+  const InitializationSettings initializationSettings = InitializationSettings(
+    android: androidSettings,
+  );
 
   await flutterLocalNotificationsPlugin.initialize(initializationSettings);
 
@@ -45,7 +44,8 @@ Future<void> setupNotification() async {
 
   await flutterLocalNotificationsPlugin
       .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>()
+        AndroidFlutterLocalNotificationsPlugin
+      >()
       ?.createNotificationChannel(channel);
 
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -73,9 +73,7 @@ Future<void> setupNotification() async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   await setupNotification();
 

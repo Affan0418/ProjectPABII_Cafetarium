@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
 
 class ReviewScreen extends StatefulWidget {
   final String cafeId;
@@ -107,6 +108,20 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
       await _updateCafeRating(cafeRef);
 
+      final cafeDoc = await cafeRef.get();
+      final cafeData = cafeDoc.data() as Map<String, dynamic>;
+
+      final String cafeName = cafeData['name'] ?? 'Cafe';
+      final String ownerId = cafeData['ownerId'] ?? '';
+
+      if (ownerId.isNotEmpty && ownerId != user.uid) {
+        await _sendReviewNotification(
+          cafeName: cafeName,
+          ownerId: ownerId,
+          reviewerName: userName,
+        );
+      }
+
       if (!mounted) return;
 
       _showMessage('Review berhasil dikirim');
@@ -173,6 +188,45 @@ class _ReviewScreenState extends State<ReviewScreen> {
         );
       }),
     );
+  }
+
+  Future<void> _sendReviewNotification({
+    required String cafeName,
+    required String ownerId,
+    required String reviewerName,
+  }) async {
+    try {
+      final ownerDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(ownerId)
+          .get();
+
+      final ownerToken = ownerDoc.data()?['fcmToken'];
+
+      if (ownerToken == null || ownerToken.toString().isEmpty) {
+        debugPrint('Owner belum punya FCM token');
+        return;
+      }
+
+      const String vercelUrl =
+          'https://cafetarium-cloud.vercel.app/send-to-device';
+
+      final response = await http.post(
+        Uri.parse(vercelUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'token': ownerToken,
+          'title': '⭐ Review Baru!',
+          'body': '$reviewerName memberi review untuk $cafeName.',
+          'senderName': 'Cafetarium',
+        }),
+      );
+
+      debugPrint('Review notif status: ${response.statusCode}');
+      debugPrint('Review notif response: ${response.body}');
+    } catch (e) {
+      debugPrint('Gagal mengirim notif review: $e');
+    }
   }
 
   @override
