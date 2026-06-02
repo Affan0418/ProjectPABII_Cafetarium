@@ -95,10 +95,6 @@ class _AddPostScreenState extends State<AddPostScreen> {
           {
             "parts": [
               {
-                "inlineData": {
-                  "mimeType": "image/jpeg",
-                  "data": base64Image,
-                },
                 "inlineData": {"mimeType": "image/jpeg", "data": base64Image},
               },
               {
@@ -116,10 +112,6 @@ class _AddPostScreenState extends State<AddPostScreen> {
 
       final response = await http.post(
         Uri.parse(url),
-        headers: {
-          'x-goog-api-key': apiKey,
-          'Content-Type': 'application/json',
-        },
         headers: {'x-goog-api-key': apiKey, 'Content-Type': 'application/json'},
         body: body,
       );
@@ -307,9 +299,6 @@ class _AddPostScreenState extends State<AddPostScreen> {
   void _showMessage(String message) {
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(message)));
@@ -640,4 +629,4 @@ class _AddPostScreenState extends State<AddPostScreen> {
       ),
     );
   }
-}}
+}
