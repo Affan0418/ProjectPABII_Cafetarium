@@ -1,10 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
-<<<<<<< Updated upstream
-
 import 'package:cafetarium/screens/main_screen.dart';
-=======
->>>>>>> Stashed changes
 import 'package:cafetarium/screens/map_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -150,9 +146,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
 
       final response = await http.post(
         Uri.parse(vercelUrl),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'topic': 'cafes',
           'title': '☕ Cafe Baru!',
@@ -240,9 +234,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
 
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(
-          builder: (_) => const MainScreen(role: 'Owner'),
-        ),
+        MaterialPageRoute(builder: (_) => const MainScreen(role: 'Owner')),
         (route) => false,
       );
     } catch (e) {
@@ -322,10 +314,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
           ),
         ),
         const SizedBox(height: 3),
-        Text(
-          subtitle,
-          style: TextStyle(fontSize: 12, color: subTextColor),
-        ),
+        Text(subtitle, style: TextStyle(fontSize: 12, color: subTextColor)),
         const SizedBox(height: 8),
       ],
     );
@@ -423,11 +412,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
                               : Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(
-                                      Icons.add,
-                                      size: 38,
-                                      color: textColor,
-                                    ),
+                                    Icon(Icons.add, size: 38, color: textColor),
                                     const SizedBox(height: 2),
                                     Text(
                                       'Unggah Foto',
@@ -593,8 +578,9 @@ class _AddPostScreenState extends State<AddPostScreen> {
                         onPressed: _isUploading ? null : _submitPost,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryBrown,
-                          disabledBackgroundColor:
-                              primaryBrown.withOpacity(0.5),
+                          disabledBackgroundColor: primaryBrown.withOpacity(
+                            0.5,
+                          ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(9),
                           ),
