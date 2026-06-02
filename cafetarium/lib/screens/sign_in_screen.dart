@@ -46,7 +46,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   Icon(Icons.coffee, size: 100, color: Colors.white),
                   SizedBox(height: 20),
                   Text(
-                    '${widget.role} Login',
+                    'Login',
                     style: TextStyle(
                       fontSize: 34,
                       fontWeight: FontWeight.bold,
