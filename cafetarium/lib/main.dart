@@ -1,9 +1,11 @@
+import 'package:cafetarium/theme_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import 'package:cafetarium/firebase_options.dart';
+
 import 'package:cafetarium/screens/splash_screen.dart';
 import 'package:cafetarium/screens/role_selection_screen.dart';
 import 'package:cafetarium/screens/sign_in_screen.dart';
@@ -23,7 +25,6 @@ Future<void> setupNotification() async {
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   await FirebaseMessaging.instance.requestPermission();
-
   await FirebaseMessaging.instance.subscribeToTopic('cafes');
 
   const AndroidInitializationSettings androidSettings =
@@ -44,8 +45,7 @@ Future<void> setupNotification() async {
 
   await flutterLocalNotificationsPlugin
       .resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin
-      >()
+          AndroidFlutterLocalNotificationsPlugin>()
       ?.createNotificationChannel(channel);
 
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -74,8 +74,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
   await setupNotification();
+
+  await themeController.loadTheme();
 
   runApp(const MyApp());
 }
@@ -83,21 +84,52 @@ void main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
+  static const Color brown = Color(0xff9B6B43);
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
+    return AnimatedBuilder(
+      animation: themeController,
+      builder: (context, _) {
+        return MaterialApp(
+          debugShowCheckedModeBanner: false,
 
-      initialRoute: '/splash',
+          themeMode: themeController.themeMode,
 
-      routes: {
-        '/splash': (context) => const SplashScreen(),
-        '/signin': (context) => const SignInScreen(role: 'Customer'),
-        '/role': (context) => const RoleSelectionScreen(),
-        '/signup': (context) => const SignUpScreen(role: 'Customer'),
-        '/search': (context) => const SearchScreen(),
-        '/favorite': (context) => const FavoriteScreen(),
-        '/map': (context) => const MapScreen(),
+          theme: ThemeData(
+            brightness: Brightness.light,
+            primaryColor: brown,
+            scaffoldBackgroundColor: const Color(0xffF5ECE9),
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: brown,
+              brightness: Brightness.light,
+            ),
+            useMaterial3: true,
+          ),
+
+          darkTheme: ThemeData(
+            brightness: Brightness.dark,
+            primaryColor: brown,
+            scaffoldBackgroundColor: const Color(0xff121212),
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: brown,
+              brightness: Brightness.dark,
+            ),
+            useMaterial3: true,
+          ),
+
+          initialRoute: '/splash',
+
+          routes: {
+            '/splash': (context) => const SplashScreen(),
+            '/signin': (context) => const SignInScreen(role: 'Customer'),
+            '/role': (context) => const RoleSelectionScreen(),
+            '/signup': (context) => const SignUpScreen(role: 'Customer'),
+            '/search': (context) => const SearchScreen(),
+            '/favorite': (context) => const FavoriteScreen(),
+            '/map': (context) => const MapScreen(),
+          },
+        );
       },
     );
   }

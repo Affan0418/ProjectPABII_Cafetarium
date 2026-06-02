@@ -14,7 +14,7 @@ class FavoriteScreen extends StatelessWidget {
   });
 
   static const Color primaryBrown = Color(0xff9b6a43);
-  static const Color bgColor = Color(0xfff3e8ec);
+  static const Color lightBgColor = Color(0xfff3e8ec);
 
   Future<DocumentSnapshot> _getCafeData(String cafeId) {
     return FirebaseFirestore.instance.collection('cafes').doc(cafeId).get();
@@ -62,7 +62,6 @@ class FavoriteScreen extends StatelessWidget {
             )
           else
             const SizedBox(width: 24),
-
           const Expanded(
             child: Center(
               child: Text(
@@ -75,7 +74,6 @@ class FavoriteScreen extends StatelessWidget {
               ),
             ),
           ),
-
           const SizedBox(width: 24),
         ],
       ),
@@ -84,6 +82,16 @@ class FavoriteScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final Color bgColor = isDark ? const Color(0xff121212) : lightBgColor;
+    final Color cardColor =
+        isDark ? const Color(0xff1E1E1E) : Colors.grey.shade300;
+    final Color textColor = isDark ? Colors.white : Colors.black87;
+    final Color subTextColor = isDark ? Colors.white70 : Colors.grey.shade700;
+    final Color loadingCardColor =
+        isDark ? const Color(0xff242424) : Colors.grey.shade300;
+
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
@@ -116,7 +124,6 @@ class FavoriteScreen extends StatelessWidget {
         child: Column(
           children: [
             buildHeader(context),
-
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
@@ -127,19 +134,27 @@ class FavoriteScreen extends StatelessWidget {
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(
-                      child: CircularProgressIndicator(),
+                      child: CircularProgressIndicator(
+                        color: primaryBrown,
+                      ),
                     );
                   }
 
                   if (snapshot.hasError) {
                     return Center(
-                      child: Text('Error: ${snapshot.error}'),
+                      child: Text(
+                        'Error: ${snapshot.error}',
+                        style: TextStyle(color: textColor),
+                      ),
                     );
                   }
 
                   if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return const Center(
-                      child: Text('Belum ada cafe favorite'),
+                    return Center(
+                      child: Text(
+                        'Belum ada cafe favorite',
+                        style: TextStyle(color: textColor),
+                      ),
                     );
                   }
 
@@ -164,10 +179,13 @@ class FavoriteScreen extends StatelessWidget {
                               margin: const EdgeInsets.only(bottom: 14),
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
-                                color: Colors.grey.shade300,
+                                color: loadingCardColor,
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: const Text('Memuat cafe...'),
+                              child: Text(
+                                'Memuat cafe...',
+                                style: TextStyle(color: textColor),
+                              ),
                             );
                           }
 
@@ -176,11 +194,14 @@ class FavoriteScreen extends StatelessWidget {
                               margin: const EdgeInsets.only(bottom: 14),
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
-                                color: Colors.red.shade100,
+                                color: isDark
+                                    ? Colors.red.shade900
+                                    : Colors.red.shade100,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
                                 'Gagal memuat cafe: ${cafeSnapshot.error}',
+                                style: TextStyle(color: textColor),
                               ),
                             );
                           }
@@ -191,11 +212,12 @@ class FavoriteScreen extends StatelessWidget {
                               margin: const EdgeInsets.only(bottom: 14),
                               padding: const EdgeInsets.all(14),
                               decoration: BoxDecoration(
-                                color: Colors.grey.shade300,
+                                color: loadingCardColor,
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: const Text(
+                              child: Text(
                                 'Cafe sudah tidak tersedia',
+                                style: TextStyle(color: textColor),
                               ),
                             );
                           }
@@ -226,7 +248,7 @@ class FavoriteScreen extends StatelessWidget {
                               margin: const EdgeInsets.only(bottom: 14),
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: Colors.grey.shade300,
+                                color: cardColor,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Row(
@@ -245,7 +267,8 @@ class FavoriteScreen extends StatelessWidget {
                                           name,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
+                                          style: TextStyle(
+                                            color: textColor,
                                             fontWeight: FontWeight.bold,
                                             fontSize: 16,
                                           ),
@@ -258,7 +281,7 @@ class FavoriteScreen extends StatelessWidget {
                                             overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
                                               fontSize: 12,
-                                              color: Colors.grey.shade700,
+                                              color: subTextColor,
                                             ),
                                           ),
                                       ],
@@ -276,7 +299,8 @@ class FavoriteScreen extends StatelessWidget {
                                       const SizedBox(height: 3),
                                       Text(
                                         rating.toStringAsFixed(1),
-                                        style: const TextStyle(
+                                        style: TextStyle(
+                                          color: textColor,
                                           fontWeight: FontWeight.bold,
                                           fontSize: 14,
                                         ),

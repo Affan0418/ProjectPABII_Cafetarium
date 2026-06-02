@@ -23,11 +23,10 @@ class _MapScreenState extends State<MapScreen> {
   final TextEditingController searchController = TextEditingController();
 
   LatLng selectedLocation = const LatLng(-2.9761, 104.7754);
-
   String searchQuery = '';
 
   static const Color primaryBrown = Color(0xff9b6a43);
-  static const Color bgColor = Color(0xfff3e8ec);
+  static const Color lightBgColor = Color(0xfff3e8ec);
 
   @override
   void dispose() {
@@ -65,6 +64,13 @@ class _MapScreenState extends State<MapScreen> {
     required String name,
     required double rating,
   }) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final Color sheetColor = isDark ? const Color(0xff1E1E1E) : Colors.white;
+    final Color cardIconBg =
+        isDark ? const Color(0xff2A2A2A) : primaryBrown.withOpacity(0.12);
+    final Color textColor = isDark ? Colors.white : Colors.black87;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -73,8 +79,11 @@ class _MapScreenState extends State<MapScreen> {
           margin: const EdgeInsets.all(14),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: sheetColor,
             borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: isDark ? Colors.white12 : Colors.transparent,
+            ),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.18),
@@ -89,7 +98,7 @@ class _MapScreenState extends State<MapScreen> {
                 width: 58,
                 height: 58,
                 decoration: BoxDecoration(
-                  color: primaryBrown.withOpacity(0.12),
+                  color: cardIconBg,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: const Icon(
@@ -108,7 +117,8 @@ class _MapScreenState extends State<MapScreen> {
                       name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
+                        color: textColor,
                         fontSize: 17,
                         fontWeight: FontWeight.bold,
                       ),
@@ -120,7 +130,10 @@ class _MapScreenState extends State<MapScreen> {
                         const SizedBox(width: 4),
                         Text(
                           rating.toStringAsFixed(1),
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            color: textColor,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ],
                     ),
@@ -156,6 +169,8 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Marker _buildCafeMarker(QueryDocumentSnapshot doc) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
     final data = doc.data() as Map<String, dynamic>;
 
     final double lat = (data['latitude'] ?? 0).toDouble();
@@ -164,6 +179,9 @@ class _MapScreenState extends State<MapScreen> {
     final double rating = (data['rating'] ?? 0).toDouble();
 
     final point = LatLng(lat, lng);
+
+    final Color markerBg = isDark ? const Color(0xff1E1E1E) : Colors.white;
+    final Color markerText = isDark ? Colors.white : Colors.black87;
 
     return Marker(
       point: point,
@@ -182,8 +200,11 @@ class _MapScreenState extends State<MapScreen> {
             Container(
               padding: const EdgeInsets.all(7),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: markerBg,
                 shape: BoxShape.circle,
+                border: Border.all(
+                  color: isDark ? Colors.white12 : Colors.transparent,
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.25),
@@ -203,8 +224,11 @@ class _MapScreenState extends State<MapScreen> {
               constraints: const BoxConstraints(maxWidth: 105),
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: markerBg,
                 borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: isDark ? Colors.white12 : Colors.transparent,
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.16),
@@ -218,7 +242,8 @@ class _MapScreenState extends State<MapScreen> {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
-                style: const TextStyle(
+                style: TextStyle(
+                  color: markerText,
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
                 ),
@@ -265,6 +290,13 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Widget _buildTopSearchBar() {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final Color cardColor = isDark ? const Color(0xff1E1E1E) : Colors.white;
+    final Color textColor = isDark ? Colors.white : Colors.black87;
+    final Color hintColor = isDark ? Colors.white60 : Colors.black54;
+    final Color borderColor = isDark ? Colors.white12 : Colors.grey.shade300;
+
     if (widget.isPickingLocation) {
       return Positioned(
         top: 14,
@@ -273,8 +305,9 @@ class _MapScreenState extends State<MapScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: cardColor,
             borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: borderColor),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.18),
@@ -283,16 +316,16 @@ class _MapScreenState extends State<MapScreen> {
               ),
             ],
           ),
-          child: const Row(
+          child: Row(
             children: [
-              Icon(Icons.touch_app, color: primaryBrown),
-              SizedBox(width: 12),
+              const Icon(Icons.touch_app, color: primaryBrown),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   'Tap peta untuk memilih lokasi cafe',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: textColor,
                   ),
                 ),
               ),
@@ -311,10 +344,10 @@ class _MapScreenState extends State<MapScreen> {
           Container(
             height: 50,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: cardColor,
               borderRadius: BorderRadius.circular(999),
               border: Border.all(
-                color: Colors.grey.shade300,
+                color: borderColor,
                 width: 1,
               ),
               boxShadow: [
@@ -328,7 +361,8 @@ class _MapScreenState extends State<MapScreen> {
             child: TextField(
               controller: searchController,
               textAlignVertical: TextAlignVertical.center,
-              style: const TextStyle(
+              style: TextStyle(
+                color: textColor,
                 fontSize: 14,
                 height: 1.2,
               ),
@@ -340,10 +374,10 @@ class _MapScreenState extends State<MapScreen> {
               decoration: InputDecoration(
                 border: InputBorder.none,
                 hintText: 'Cari cafe di map...',
-                hintStyle: const TextStyle(
+                hintStyle: TextStyle(
                   fontSize: 14,
                   height: 1.2,
-                  color: Colors.black54,
+                  color: hintColor,
                 ),
                 contentPadding: const EdgeInsets.symmetric(vertical: 14),
                 prefixIcon: const Icon(
@@ -379,6 +413,13 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Widget _buildSearchResults() {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final Color cardColor = isDark ? const Color(0xff1E1E1E) : Colors.white;
+    final Color textColor = isDark ? Colors.white : Colors.black87;
+    final Color subTextColor = isDark ? Colors.white70 : Colors.black54;
+    final Color borderColor = isDark ? Colors.white12 : Colors.transparent;
+
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance.collection('cafes').snapshots(),
       builder: (context, snapshot) {
@@ -401,16 +442,20 @@ class _MapScreenState extends State<MapScreen> {
             margin: const EdgeInsets.only(top: 8),
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: cardColor,
               borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: borderColor),
             ),
-            child: const Row(
+            child: Row(
               children: [
-                Icon(Icons.search_off, color: primaryBrown),
-                SizedBox(width: 10),
+                const Icon(Icons.search_off, color: primaryBrown),
+                const SizedBox(width: 10),
                 Text(
                   'Cafe tidak ditemukan',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                  style: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
@@ -421,8 +466,9 @@ class _MapScreenState extends State<MapScreen> {
           margin: const EdgeInsets.only(top: 8),
           constraints: const BoxConstraints(maxHeight: 220),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: cardColor,
             borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: borderColor),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.14),
@@ -458,13 +504,19 @@ class _MapScreenState extends State<MapScreen> {
                   name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 subtitle: Row(
                   children: [
                     const Icon(Icons.star, color: Colors.orange, size: 15),
                     const SizedBox(width: 3),
-                    Text(rating.toStringAsFixed(1)),
+                    Text(
+                      rating.toStringAsFixed(1),
+                      style: TextStyle(color: subTextColor),
+                    ),
                   ],
                 ),
                 onTap: () {
@@ -513,8 +565,10 @@ class _MapScreenState extends State<MapScreen> {
     required IconData icon,
     required VoidCallback onTap,
   }) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Material(
-      color: Colors.white,
+      color: isDark ? const Color(0xff1E1E1E) : Colors.white,
       shape: const CircleBorder(),
       elevation: 5,
       child: InkWell(
@@ -589,6 +643,10 @@ class _MapScreenState extends State<MapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final Color bgColor = isDark ? const Color(0xff121212) : lightBgColor;
+
     return Scaffold(
       backgroundColor: bgColor,
       appBar: _buildAppBar(),
@@ -611,7 +669,6 @@ class _MapScreenState extends State<MapScreen> {
                 _buildMarkerLayer(),
               ],
             ),
-
             _buildTopSearchBar(),
             _buildZoomButtons(),
             _buildPickLocationButton(),

@@ -129,13 +129,6 @@ class _SignInScreenState extends State<SignInScreen> {
 
                           final uid = credential.user!.uid;
 
-                          final token = await FirebaseMessaging.instance
-                              .getToken();
-
-                          await FirebaseFirestore.instance
-                              .collection('users')
-                              .doc(uid)
-                              .update({'fcmToken': token});
 
                           final userDoc = await FirebaseFirestore.instance
                               .collection('users')
