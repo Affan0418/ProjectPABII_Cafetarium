@@ -1,7 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
+<<<<<<< Updated upstream
 
 import 'package:cafetarium/screens/main_screen.dart';
+=======
+>>>>>>> Stashed changes
 import 'package:cafetarium/screens/map_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -96,6 +99,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
                   "mimeType": "image/jpeg",
                   "data": base64Image,
                 },
+                "inlineData": {"mimeType": "image/jpeg", "data": base64Image},
               },
               {
                 "text":
@@ -116,6 +120,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
           'x-goog-api-key': apiKey,
           'Content-Type': 'application/json',
         },
+        headers: {'x-goog-api-key': apiKey, 'Content-Type': 'application/json'},
         body: body,
       );
 
@@ -305,6 +310,9 @@ class _AddPostScreenState extends State<AddPostScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message)),
     );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 
   Widget _sectionTitle(
@@ -632,4 +640,4 @@ class _AddPostScreenState extends State<AddPostScreen> {
       ),
     );
   }
-}
+}}
