@@ -13,9 +13,6 @@ class DetailScreen extends StatelessWidget {
 
   static const Color primaryBrown = Color(0xff9b6a43);
   static const Color bgColor = Color(0xfff3e8ec);
-  static const Color boxColor = Color(0xffeee4e8);
-
-  static const String currentUserId = 'guest_user';
 
   Future<void> _openGoogleMaps(double latitude, double longitude) async {
     final Uri url = Uri.parse(
@@ -47,7 +44,6 @@ class DetailScreen extends StatelessWidget {
 
     if (favoriteDoc.exists) {
       await favoriteRef.delete();
-
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Cafe dihapus dari favorite')),
@@ -89,9 +85,7 @@ class DetailScreen extends StatelessWidget {
         final bool isFavorite = snapshot.data?.exists ?? false;
 
         return GestureDetector(
-          onTap: () {
-            _toggleFavorite(context, cafeId);
-          },
+          onTap: () => _toggleFavorite(context, cafeId),
           child: Container(
             padding: const EdgeInsets.all(9),
             decoration: BoxDecoration(
@@ -144,8 +138,239 @@ class DetailScreen extends StatelessWidget {
     );
   }
 
+  void _showReplyDialog({
+    required BuildContext context,
+    required DocumentReference reviewRef,
+    String? oldReply,
+  }) {
+    final TextEditingController replyController = TextEditingController(
+      text: oldReply ?? '',
+    );
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: bgColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          title: const Text(
+            'Balas Review',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: TextField(
+            controller: replyController,
+            maxLines: 4,
+            decoration: InputDecoration(
+              hintText: 'Tulis balasan owner...',
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: primaryBrown),
+              onPressed: () async {
+                final replyText = replyController.text.trim();
+
+                if (replyText.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Balasan tidak boleh kosong')),
+                  );
+                  return;
+                }
+
+                final user = FirebaseAuth.instance.currentUser;
+
+                await reviewRef.update({
+                  'ownerReply': replyText,
+                  'ownerReplyAt': Timestamp.now(),
+                  'ownerReplyBy': user?.uid,
+                });
+
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Balasan berhasil dikirim')),
+                  );
+                }
+              },
+              child: const Text('Kirim', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildReviewImage(BuildContext context, String imageBase64) {
+    return GestureDetector(
+      onTap: () {
+        _showFullImage(context, imageBase64);
+      },
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.memory(
+              base64Decode(imageBase64),
+              height: 120,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
+          ),
+          Positioned(
+            right: 8,
+            bottom: 8,
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.55),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.zoom_out_map,
+                color: Colors.white,
+                size: 18,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOwnerReply(String reply) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 10),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xfffff3e8),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: primaryBrown.withOpacity(0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.store, color: primaryBrown, size: 16),
+              SizedBox(width: 6),
+              Text(
+                'Balasan Owner',
+                style: TextStyle(
+                  color: primaryBrown,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            reply,
+            style: const TextStyle(fontSize: 13, color: Colors.black87),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReviewCard({
+    required BuildContext context,
+    required QueryDocumentSnapshot doc,
+    required bool isOwner,
+  }) {
+    final data = doc.data() as Map<String, dynamic>;
+    final String? reviewImage = data['image']?.toString();
+    final String ownerReply = data['ownerReply']?.toString() ?? '';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (reviewImage != null && reviewImage.isNotEmpty)
+            _buildReviewImage(context, reviewImage),
+
+          const SizedBox(height: 8),
+
+          Row(
+            children: [
+              const CircleAvatar(
+                radius: 14,
+                child: Icon(Icons.person, size: 16),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  data['userName'] ?? 'Guest',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 6),
+
+          Row(
+            children: List.generate(
+              (data['rating'] ?? 0).toInt(),
+              (index) => const Icon(Icons.star, color: Colors.orange, size: 16),
+            ),
+          ),
+
+          const SizedBox(height: 6),
+
+          Text(data['comment'] ?? ''),
+
+          if (ownerReply.isNotEmpty) _buildOwnerReply(ownerReply),
+
+          if (isOwner)
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () {
+                  _showReplyDialog(
+                    context: context,
+                    reviewRef: doc.reference,
+                    oldReply: ownerReply.isEmpty ? null : ownerReply,
+                  );
+                },
+                icon: const Icon(Icons.reply, size: 18, color: primaryBrown),
+                label: Text(
+                  ownerReply.isEmpty ? 'Balas' : 'Edit Balasan',
+                  style: const TextStyle(
+                    color: primaryBrown,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+
     return Scaffold(
       backgroundColor: bgColor,
       body: SafeArea(
@@ -175,6 +400,10 @@ class DetailScreen extends StatelessWidget {
             final double latitude = (data['latitude'] ?? 0).toDouble();
             final double longitude = (data['longitude'] ?? 0).toDouble();
             final String? imageBase64 = data['image'];
+            final String ownerId = data['ownerId'] ?? '';
+
+            final bool isOwner =
+                currentUser != null && currentUser.uid == ownerId;
 
             return Column(
               children: [
@@ -245,7 +474,6 @@ class DetailScreen extends StatelessWidget {
                                         ),
                                       ),
                               ),
-
                               if (imageBase64 != null && imageBase64.isNotEmpty)
                                 Positioned(
                                   right: 10,
@@ -280,11 +508,8 @@ class DetailScreen extends StatelessWidget {
                                 ),
                               ),
                             ),
-
                             _buildFavoriteButton(context),
-
                             const SizedBox(width: 10),
-
                             const Icon(
                               Icons.star,
                               color: Colors.orange,
@@ -348,7 +573,6 @@ class DetailScreen extends StatelessWidget {
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-
                             TextButton(
                               onPressed: () {
                                 Navigator.push(
@@ -405,73 +629,10 @@ class DetailScreen extends StatelessWidget {
 
                             return Column(
                               children: reviews.map((doc) {
-                                final data = doc.data() as Map<String, dynamic>;
-
-                                return Container(
-                                  margin: const EdgeInsets.only(bottom: 10),
-                                  padding: const EdgeInsets.all(10),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(10),
-                                  ),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      if (data['image'] != null &&
-                                          data['image'].toString().isNotEmpty)
-                                        ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                          child: Image.memory(
-                                            base64Decode(data['image']),
-                                            height: 120,
-                                            width: double.infinity,
-                                            fit: BoxFit.cover,
-                                          ),
-                                        ),
-
-                                      const SizedBox(height: 8),
-
-                                      Row(
-                                        children: [
-                                          const CircleAvatar(
-                                            radius: 14,
-                                            child: Icon(Icons.person, size: 16),
-                                          ),
-
-                                          const SizedBox(width: 8),
-
-                                          Expanded(
-                                            child: Text(
-                                              data['userName'] ?? 'Guest',
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-
-                                      const SizedBox(height: 6),
-
-                                      Row(
-                                        children: List.generate(
-                                          (data['rating'] ?? 0).toInt(),
-                                          (index) => const Icon(
-                                            Icons.star,
-                                            color: Colors.orange,
-                                            size: 16,
-                                          ),
-                                        ),
-                                      ),
-
-                                      const SizedBox(height: 6),
-
-                                      Text(data['comment'] ?? ''),
-                                    ],
-                                  ),
+                                return _buildReviewCard(
+                                  context: context,
+                                  doc: doc,
+                                  isOwner: isOwner,
                                 );
                               }).toList(),
                             );
