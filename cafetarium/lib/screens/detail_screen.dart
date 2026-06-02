@@ -12,7 +12,7 @@ class DetailScreen extends StatelessWidget {
   const DetailScreen({super.key, required this.cafeId});
 
   static const Color primaryBrown = Color(0xff9b6a43);
-  static const Color bgColor = Color(0xfff3e8ec);
+  static const Color lightBgColor = Color(0xfff3e8ec);
 
   Future<void> _openGoogleMaps(double latitude, double longitude) async {
     final Uri url = Uri.parse(
@@ -44,13 +44,17 @@ class DetailScreen extends StatelessWidget {
 
     if (favoriteDoc.exists) {
       await favoriteRef.delete();
+
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Cafe dihapus dari favorite')),
         );
       }
     } else {
-      await favoriteRef.set({'cafeId': cafeId, 'createdAt': Timestamp.now()});
+      await favoriteRef.set({
+        'cafeId': cafeId,
+        'createdAt': Timestamp.now(),
+      });
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -60,8 +64,9 @@ class DetailScreen extends StatelessWidget {
     }
   }
 
-  Widget _buildFavoriteButton(BuildContext context) {
+  Widget _buildFavoriteButton(BuildContext context, bool isDark) {
     final user = FirebaseAuth.instance.currentUser;
+    final Color buttonColor = isDark ? const Color(0xff1E1E1E) : Colors.white;
 
     if (user == null) {
       return GestureDetector(
@@ -89,8 +94,11 @@ class DetailScreen extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(9),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: buttonColor,
               borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: isDark ? Colors.white12 : Colors.transparent,
+              ),
             ),
             child: Icon(
               isFavorite ? Icons.favorite : Icons.favorite_border,
@@ -141,31 +149,42 @@ class DetailScreen extends StatelessWidget {
   void _showReplyDialog({
     required BuildContext context,
     required DocumentReference reviewRef,
+    required bool isDark,
     String? oldReply,
   }) {
     final TextEditingController replyController = TextEditingController(
       text: oldReply ?? '',
     );
 
+    final Color dialogColor = isDark ? const Color(0xff1E1E1E) : lightBgColor;
+    final Color fieldColor = isDark ? const Color(0xff242424) : Colors.white;
+    final Color textColor = isDark ? Colors.white : Colors.black87;
+    final Color hintColor = isDark ? Colors.white60 : Colors.grey;
+
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: bgColor,
+          backgroundColor: dialogColor,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(18),
           ),
-          title: const Text(
+          title: Text(
             'Balas Review',
-            style: TextStyle(fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
           ),
           content: TextField(
             controller: replyController,
             maxLines: 4,
+            style: TextStyle(color: textColor),
             decoration: InputDecoration(
               hintText: 'Tulis balasan owner...',
+              hintStyle: TextStyle(color: hintColor),
               filled: true,
-              fillColor: Colors.white,
+              fillColor: fieldColor,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
                 borderSide: BorderSide.none,
@@ -175,7 +194,10 @@ class DetailScreen extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+              child: Text(
+                'Batal',
+                style: TextStyle(color: isDark ? Colors.white70 : Colors.grey),
+              ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(backgroundColor: primaryBrown),
@@ -204,10 +226,70 @@ class DetailScreen extends StatelessWidget {
                   );
                 }
               },
-              child: const Text('Kirim', style: TextStyle(color: Colors.white)),
+              child: const Text(
+                'Kirim',
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ],
         );
+      },
+    );
+  }
+
+  Widget _defaultAvatar(bool isDark) {
+    return CircleAvatar(
+      radius: 16,
+      backgroundColor: isDark ? const Color(0xff2A2A2A) : Colors.grey.shade200,
+      child: Icon(
+        Icons.person,
+        size: 18,
+        color: isDark ? Colors.white70 : Colors.grey,
+      ),
+    );
+  }
+
+  Widget _buildAvatarFromBase64(String imageBase64, bool isDark) {
+    try {
+      return CircleAvatar(
+        radius: 16,
+        backgroundColor:
+            isDark ? const Color(0xff2A2A2A) : Colors.grey.shade200,
+        backgroundImage: MemoryImage(base64Decode(imageBase64)),
+      );
+    } catch (e) {
+      return _defaultAvatar(isDark);
+    }
+  }
+
+  Widget _buildReviewAvatar(
+    String userId,
+    String userProfileImage,
+    bool isDark,
+  ) {
+    if (userProfileImage.isNotEmpty) {
+      return _buildAvatarFromBase64(userProfileImage, isDark);
+    }
+
+    if (userId.isEmpty) {
+      return _defaultAvatar(isDark);
+    }
+
+    return FutureBuilder<DocumentSnapshot>(
+      future: FirebaseFirestore.instance.collection('users').doc(userId).get(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || !snapshot.data!.exists) {
+          return _defaultAvatar(isDark);
+        }
+
+        final userData = snapshot.data!.data() as Map<String, dynamic>;
+        final String profileImage = userData['profileImage']?.toString() ?? '';
+
+        if (profileImage.isEmpty) {
+          return _defaultAvatar(isDark);
+        }
+
+        return _buildAvatarFromBase64(profileImage, isDark);
       },
     );
   }
@@ -249,15 +331,18 @@ class DetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildOwnerReply(String reply) {
+  Widget _buildOwnerReply({
+    required String reply,
+    required bool isDark,
+  }) {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(top: 10),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: const Color(0xfffff3e8),
+        color: isDark ? const Color(0xff2A211B) : const Color(0xfffff3e8),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: primaryBrown.withOpacity(0.25)),
+        border: Border.all(color: primaryBrown.withOpacity(0.35)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -279,7 +364,10 @@ class DetailScreen extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             reply,
-            style: const TextStyle(fontSize: 13, color: Colors.black87),
+            style: TextStyle(
+              fontSize: 13,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
           ),
         ],
       ),
@@ -290,8 +378,16 @@ class DetailScreen extends StatelessWidget {
     required BuildContext context,
     required QueryDocumentSnapshot doc,
     required bool isOwner,
+    required bool isDark,
+    required Color cardColor,
+    required Color textColor,
+    required Color subTextColor,
   }) {
     final data = doc.data() as Map<String, dynamic>;
+
+    final String userId = data['userId']?.toString() ?? '';
+    final String userName = data['userName']?.toString() ?? 'Guest';
+    final String userProfileImage = data['userProfileImage']?.toString() ?? '';
     final String? reviewImage = data['image']?.toString();
     final String ownerReply = data['ownerReply']?.toString() ?? '';
 
@@ -299,8 +395,11 @@ class DetailScreen extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardColor,
         borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isDark ? Colors.white12 : Colors.transparent,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -312,15 +411,15 @@ class DetailScreen extends StatelessWidget {
 
           Row(
             children: [
-              const CircleAvatar(
-                radius: 14,
-                child: Icon(Icons.person, size: 16),
-              ),
+              _buildReviewAvatar(userId, userProfileImage, isDark),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  data['userName'] ?? 'Guest',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  userName,
+                  style: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
@@ -337,9 +436,13 @@ class DetailScreen extends StatelessWidget {
 
           const SizedBox(height: 6),
 
-          Text(data['comment'] ?? ''),
+          Text(
+            data['comment'] ?? '',
+            style: TextStyle(color: textColor),
+          ),
 
-          if (ownerReply.isNotEmpty) _buildOwnerReply(ownerReply),
+          if (ownerReply.isNotEmpty)
+            _buildOwnerReply(reply: ownerReply, isDark: isDark),
 
           if (isOwner)
             Align(
@@ -350,6 +453,7 @@ class DetailScreen extends StatelessWidget {
                     context: context,
                     reviewRef: doc.reference,
                     oldReply: ownerReply.isEmpty ? null : ownerReply,
+                    isDark: isDark,
                   );
                 },
                 icon: const Icon(Icons.reply, size: 18, color: primaryBrown),
@@ -371,6 +475,18 @@ class DetailScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
 
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final Color bgColor = isDark ? const Color(0xff121212) : lightBgColor;
+    final Color cardColor =
+        isDark ? const Color(0xff1E1E1E) : Colors.white;
+    final Color textColor = isDark ? Colors.white : Colors.black87;
+    final Color subTextColor = isDark ? Colors.white70 : Colors.grey.shade700;
+    final Color placeholderColor =
+        isDark ? const Color(0xff2A2A2A) : Colors.grey.shade300;
+    final Color emptyCardColor =
+        isDark ? const Color(0xff1E1E1E) : Colors.white;
+
     return Scaffold(
       backgroundColor: bgColor,
       body: SafeArea(
@@ -381,15 +497,27 @@ class DetailScreen extends StatelessWidget {
               .snapshots(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(
+                child: CircularProgressIndicator(color: primaryBrown),
+              );
             }
 
             if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
+              return Center(
+                child: Text(
+                  'Error: ${snapshot.error}',
+                  style: TextStyle(color: textColor),
+                ),
+              );
             }
 
             if (!snapshot.hasData || !snapshot.data!.exists) {
-              return const Center(child: Text('Cafe tidak ditemukan'));
+              return Center(
+                child: Text(
+                  'Cafe tidak ditemukan',
+                  style: TextStyle(color: textColor),
+                ),
+              );
             }
 
             final data = snapshot.data!.data() as Map<String, dynamic>;
@@ -455,8 +583,7 @@ class DetailScreen extends StatelessWidget {
                             children: [
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(10),
-                                child:
-                                    imageBase64 != null &&
+                                child: imageBase64 != null &&
                                         imageBase64.isNotEmpty
                                     ? Image.memory(
                                         base64Decode(imageBase64),
@@ -467,10 +594,11 @@ class DetailScreen extends StatelessWidget {
                                     : Container(
                                         width: double.infinity,
                                         height: 150,
-                                        color: Colors.grey.shade300,
-                                        child: const Icon(
+                                        color: placeholderColor,
+                                        child: Icon(
                                           Icons.local_cafe,
                                           size: 50,
+                                          color: subTextColor,
                                         ),
                                       ),
                               ),
@@ -502,13 +630,14 @@ class DetailScreen extends StatelessWidget {
                             Expanded(
                               child: Text(
                                 name,
-                                style: const TextStyle(
+                                style: TextStyle(
+                                  color: textColor,
                                   fontSize: 19,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
-                            _buildFavoriteButton(context),
+                            _buildFavoriteButton(context, isDark),
                             const SizedBox(width: 10),
                             const Icon(
                               Icons.star,
@@ -517,7 +646,8 @@ class DetailScreen extends StatelessWidget {
                             ),
                             Text(
                               rating.toStringAsFixed(1),
-                              style: const TextStyle(
+                              style: TextStyle(
+                                color: textColor,
                                 fontSize: 17,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -533,14 +663,18 @@ class DetailScreen extends StatelessWidget {
                           },
                           child: Row(
                             children: [
-                              const Icon(Icons.location_on, size: 20),
+                              const Icon(
+                                Icons.location_on,
+                                size: 20,
+                                color: primaryBrown,
+                              ),
                               const SizedBox(width: 5),
                               Expanded(
                                 child: Text(
                                   'Lihat Lokasi Cafe di Google Maps',
                                   style: TextStyle(
                                     fontSize: 13,
-                                    color: Colors.blue.shade700,
+                                    color: Colors.blue.shade400,
                                     decoration: TextDecoration.underline,
                                     fontWeight: FontWeight.w600,
                                   ),
@@ -555,9 +689,9 @@ class DetailScreen extends StatelessWidget {
                         if (description.isNotEmpty)
                           Text(
                             description,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
-                              color: Colors.black87,
+                              color: textColor,
                             ),
                           ),
 
@@ -566,9 +700,10 @@ class DetailScreen extends StatelessWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
+                            Text(
                               'Reviews',
                               style: TextStyle(
+                                color: textColor,
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -606,7 +741,9 @@ class DetailScreen extends StatelessWidget {
                           builder: (context, snapshot) {
                             if (!snapshot.hasData) {
                               return const Center(
-                                child: CircularProgressIndicator(),
+                                child: CircularProgressIndicator(
+                                  color: primaryBrown,
+                                ),
                               );
                             }
 
@@ -617,12 +754,16 @@ class DetailScreen extends StatelessWidget {
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(12),
                                 decoration: BoxDecoration(
-                                  color: Colors.white,
+                                  color: emptyCardColor,
                                   borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color:
+                                        isDark ? Colors.white12 : Colors.transparent,
+                                  ),
                                 ),
-                                child: const Text(
+                                child: Text(
                                   'Belum ada review',
-                                  style: TextStyle(color: Colors.grey),
+                                  style: TextStyle(color: subTextColor),
                                 ),
                               );
                             }
@@ -633,6 +774,10 @@ class DetailScreen extends StatelessWidget {
                                   context: context,
                                   doc: doc,
                                   isOwner: isOwner,
+                                  isDark: isDark,
+                                  cardColor: cardColor,
+                                  textColor: textColor,
+                                  subTextColor: subTextColor,
                                 );
                               }).toList(),
                             );

@@ -17,7 +17,7 @@ class _SearchScreenState extends State<SearchScreen> {
   String _searchQuery = '';
 
   static const Color primaryBrown = Color(0xff9b6a43);
-  static const Color bgColor = Color(0xfff3e8ec);
+  static const Color lightBgColor = Color(0xfff3e8ec);
 
   @override
   void dispose() {
@@ -25,7 +25,7 @@ class _SearchScreenState extends State<SearchScreen> {
     super.dispose();
   }
 
-  Widget buildCafeImage(String? imageBase64) {
+  Widget buildCafeImage(String? imageBase64, bool isDark) {
     if (imageBase64 != null && imageBase64.isNotEmpty) {
       return Image.memory(
         base64Decode(imageBase64),
@@ -38,17 +38,29 @@ class _SearchScreenState extends State<SearchScreen> {
     return Container(
       width: 78,
       height: 78,
-      color: Colors.grey.shade400,
-      child: const Icon(
+      color: isDark ? const Color(0xff2A2A2A) : Colors.grey.shade400,
+      child: Icon(
         Icons.local_cafe,
         size: 34,
-        color: Colors.black87,
+        color: isDark ? Colors.white70 : Colors.black87,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final Color bgColor = isDark ? const Color(0xff121212) : lightBgColor;
+    final Color cardColor =
+        isDark ? const Color(0xff1E1E1E) : Colors.grey.shade300;
+    final Color fieldColor =
+        isDark ? const Color(0xff1E1E1E) : Colors.grey.shade300;
+    final Color textColor = isDark ? Colors.white : Colors.black87;
+    final Color subTextColor = isDark ? Colors.white70 : Colors.grey.shade700;
+    final Color hintColor = isDark ? Colors.white60 : Colors.black54;
+    final Color borderColor = isDark ? Colors.white12 : Colors.transparent;
+
     return Scaffold(
       backgroundColor: bgColor,
       body: SafeArea(
@@ -91,12 +103,14 @@ class _SearchScreenState extends State<SearchScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: fieldColor,
                   borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: borderColor),
                 ),
                 child: TextField(
                   controller: _searchController,
                   autofocus: true,
+                  style: TextStyle(color: textColor),
                   onChanged: (value) {
                     setState(() {
                       _searchQuery = value.toLowerCase();
@@ -104,8 +118,12 @@ class _SearchScreenState extends State<SearchScreen> {
                   },
                   decoration: InputDecoration(
                     hintText: 'Search Cafes..',
+                    hintStyle: TextStyle(color: hintColor),
                     border: InputBorder.none,
-                    prefixIcon: const Icon(Icons.search),
+                    prefixIcon: Icon(
+                      Icons.search,
+                      color: textColor,
+                    ),
                     suffixIcon: _searchController.text.isNotEmpty
                         ? IconButton(
                             onPressed: () {
@@ -114,7 +132,10 @@ class _SearchScreenState extends State<SearchScreen> {
                                 _searchQuery = '';
                               });
                             },
-                            icon: const Icon(Icons.clear),
+                            icon: Icon(
+                              Icons.clear,
+                              color: textColor,
+                            ),
                           )
                         : null,
                   ),
@@ -131,18 +152,26 @@ class _SearchScreenState extends State<SearchScreen> {
                     .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
+                    return const Center(
+                      child: CircularProgressIndicator(color: primaryBrown),
+                    );
                   }
 
                   if (snapshot.hasError) {
                     return Center(
-                      child: Text('Error: ${snapshot.error}'),
+                      child: Text(
+                        'Error: ${snapshot.error}',
+                        style: TextStyle(color: textColor),
+                      ),
                     );
                   }
 
                   if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return const Center(
-                      child: Text('Belum ada cafe'),
+                    return Center(
+                      child: Text(
+                        'Belum ada cafe',
+                        style: TextStyle(color: textColor),
+                      ),
                     );
                   }
 
@@ -158,8 +187,11 @@ class _SearchScreenState extends State<SearchScreen> {
                   }).toList();
 
                   if (cafes.isEmpty) {
-                    return const Center(
-                      child: Text('Cafe tidak ditemukan'),
+                    return Center(
+                      child: Text(
+                        'Cafe tidak ditemukan',
+                        style: TextStyle(color: textColor),
+                      ),
                     );
                   }
 
@@ -191,14 +223,15 @@ class _SearchScreenState extends State<SearchScreen> {
                           margin: const EdgeInsets.only(bottom: 14),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade300,
+                            color: cardColor,
                             borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: borderColor),
                           ),
                           child: Row(
                             children: [
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(9),
-                                child: buildCafeImage(imageBase64),
+                                child: buildCafeImage(imageBase64, isDark),
                               ),
 
                               const SizedBox(width: 14),
@@ -211,7 +244,8 @@ class _SearchScreenState extends State<SearchScreen> {
                                       name,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
+                                      style: TextStyle(
+                                        color: textColor,
                                         fontWeight: FontWeight.bold,
                                         fontSize: 16,
                                       ),
@@ -226,7 +260,7 @@ class _SearchScreenState extends State<SearchScreen> {
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: Colors.grey.shade700,
+                                          color: subTextColor,
                                         ),
                                       ),
                                   ],
@@ -246,7 +280,8 @@ class _SearchScreenState extends State<SearchScreen> {
                                   const SizedBox(height: 3),
                                   Text(
                                     rating.toStringAsFixed(1),
-                                    style: const TextStyle(
+                                    style: TextStyle(
+                                      color: textColor,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14,
                                     ),

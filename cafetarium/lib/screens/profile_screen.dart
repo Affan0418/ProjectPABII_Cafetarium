@@ -1,9 +1,13 @@
-import 'package:cached_network_image/cached_network_image.dart';
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:cafetarium/screens/favorite_screen.dart';
 import 'package:cafetarium/screens/map_screen.dart';
+import 'package:cafetarium/theme_controller.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -15,12 +19,14 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ImagePicker _picker = ImagePicker();
 
   static const Color brown = Color(0xff9B6B43);
-  static const Color background = Color(0xffF5ECE9);
+  static const Color lightBackground = Color(0xffF5ECE9);
 
   Map<String, dynamic>? userData;
   bool isLoading = true;
+  bool isUploadingImage = false;
 
   int favoriteCount = 0;
   int reviewCount = 0;
@@ -94,20 +100,136 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> pickProfileImage(ImageSource source) async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return;
+
+      final XFile? pickedImage = await _picker.pickImage(
+        source: source,
+        imageQuality: 45,
+      );
+
+      if (pickedImage == null) return;
+
+      setState(() => isUploadingImage = true);
+
+      final bytes = await File(pickedImage.path).readAsBytes();
+      final base64Image = base64Encode(bytes);
+
+      await _firestore.collection('users').doc(user.uid).set(
+        {'profileImage': base64Image},
+        SetOptions(merge: true),
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        userData?['profileImage'] = base64Image;
+        isUploadingImage = false;
+      });
+    } catch (e) {
+      debugPrint('Upload profile image error: $e');
+
+      if (!mounted) return;
+
+      setState(() => isUploadingImage = false);
+
+      showInfoDialog(
+        "Error",
+        "Gagal mengganti foto profil.",
+      );
+    }
+  }
+
+  void showImagePickerOption() {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color bgColor = isDark ? const Color(0xff121212) : lightBackground;
+    final Color textColor = isDark ? Colors.white : brown;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: bgColor,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(24),
+        ),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.all(20),
+          child: Wrap(
+            children: [
+              Center(
+                child: Text(
+                  "Pilih Foto Profil",
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ListTile(
+                leading: Icon(Icons.camera_alt, color: textColor),
+                title: Text(
+                  "Ambil dari Kamera",
+                  style: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  pickProfileImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.photo_library, color: textColor),
+                title: Text(
+                  "Ambil dari Galeri",
+                  style: TextStyle(
+                    color: textColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  pickProfileImage(ImageSource.gallery);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> logout() async {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color dialogBg = isDark ? const Color(0xff1E1E1E) : lightBackground;
+    final Color textColor = isDark ? Colors.white : brown;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: background,
+        backgroundColor: dialogBg,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
-        title: const Text("Keluar"),
-        content: const Text("Apakah kamu yakin ingin logout?"),
+        title: Text(
+          "Keluar",
+          style: TextStyle(color: textColor),
+        ),
+        content: Text(
+          "Apakah kamu yakin ingin logout?",
+          style: TextStyle(color: textColor),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("Batal"),
+            child: Text("Batal", style: TextStyle(color: textColor)),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: brown),
@@ -220,33 +342,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void showInfoDialog(String title, String message) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color dialogBg = isDark ? const Color(0xff1E1E1E) : lightBackground;
+    final Color textColor = isDark ? Colors.white : brown;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: background,
+        backgroundColor: dialogBg,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
         ),
         title: Text(
           title,
-          style: const TextStyle(
-            color: brown,
+          style: TextStyle(
+            color: textColor,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: Text(
           message,
-          style: const TextStyle(
-            color: brown,
+          style: TextStyle(
+            color: textColor,
             fontWeight: FontWeight.w500,
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
+            child: Text(
               "Tutup",
-              style: TextStyle(color: brown),
+              style: TextStyle(color: textColor),
             ),
           ),
         ],
@@ -254,12 +380,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Widget buildProfileImage(String image) {
+    if (image.isNotEmpty) {
+      try {
+        return ClipOval(
+          child: Image.memory(
+            base64Decode(image),
+            width: 136,
+            height: 136,
+            fit: BoxFit.cover,
+          ),
+        );
+      } catch (e) {
+        return const Icon(
+          Icons.person,
+          size: 68,
+          color: Colors.grey,
+        );
+      }
+    }
+
+    return const Icon(
+      Icons.person,
+      size: 68,
+      color: Colors.grey,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final Color bgColor = isDark ? const Color(0xff121212) : lightBackground;
+    final Color cardColor = isDark ? const Color(0xff1E1E1E) : Colors.white;
+    final Color softCardColor =
+        isDark ? const Color(0xff242424) : Colors.white;
+    final Color textColor = isDark ? Colors.white : brown;
+    final Color subTextColor = isDark ? Colors.white70 : Colors.brown.shade400;
+    final Color dividerColor = isDark ? Colors.white24 : Colors.brown.shade200;
+    final Color avatarBg = isDark ? const Color(0xff2A2A2A) : Colors.white;
+
     if (isLoading) {
-      return const Scaffold(
-        backgroundColor: background,
-        body: Center(
+      return Scaffold(
+        backgroundColor: bgColor,
+        body: const Center(
           child: CircularProgressIndicator(color: brown),
         ),
       );
@@ -269,7 +433,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (user == null) {
       return Scaffold(
-        backgroundColor: background,
+        backgroundColor: bgColor,
         body: Center(
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: brown),
@@ -297,279 +461,345 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final bool isOwner = roleRaw.toLowerCase() == 'owner';
 
     return Scaffold(
-      backgroundColor: background,
+      backgroundColor: bgColor,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              Container(
-                height: 78,
-                margin: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: brown,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Center(
-                  child: Text(
-                    "Profile",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
+        child: AnimatedBuilder(
+          animation: themeController,
+          builder: (context, _) {
+            return SingleChildScrollView(
+              child: Column(
+                children: [
+                  Container(
+                    height: 78,
+                    margin: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: brown,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              CircleAvatar(
-                radius: 68,
-                backgroundColor: Colors.white,
-                backgroundImage:
-                    image.isNotEmpty ? CachedNetworkImageProvider(image) : null,
-                child: image.isEmpty
-                    ? const Icon(
-                        Icons.person,
-                        size: 68,
-                        color: Colors.grey,
-                      )
-                    : null,
-              ),
-
-              const SizedBox(height: 18),
-
-              Text(
-                name,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: brown,
-                ),
-              ),
-
-              const SizedBox(height: 5),
-
-              Text(
-                email,
-                style: const TextStyle(
-                  color: brown,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
-                ),
-              ),
-
-              const SizedBox(height: 12),
-
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: isOwner ? Colors.amber.shade700 : Colors.green.shade600,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  isOwner ? "Pemilik Cafe" : "Customer",
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 20),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: brown,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.local_cafe,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
+                    child: const Center(
                       child: Text(
-                        isOwner
-                            ? "Kelola dan promosikan cafe milikmu."
-                            : "Temukan dan simpan cafe favoritmu.",
-                        style: const TextStyle(
+                        "Profile",
+                        style: TextStyle(
                           color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
-                  ],
-                ),
-              ),
+                  ),
 
-              const SizedBox(height: 24),
+                  const SizedBox(height: 20),
 
-              Divider(color: Colors.brown.shade200),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 15,
-                  vertical: 14,
-                ),
-                child: Row(
-                  children: isOwner
-                      ? [
-                          statItem(
-                            Icons.favorite,
-                            favoriteCount.toString(),
-                            "Favorit",
+                  GestureDetector(
+                    onTap: showImagePickerOption,
+                    child: Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        CircleAvatar(
+                          radius: 68,
+                          backgroundColor: avatarBg,
+                          child: isUploadingImage
+                              ? const CircularProgressIndicator(color: brown)
+                              : buildProfileImage(image),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(9),
+                          decoration: BoxDecoration(
+                            color: brown,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: avatarBg,
+                              width: 3,
+                            ),
                           ),
-                          divider(),
-                          statItem(
-                            Icons.star,
-                            reviewCount.toString(),
-                            "Review",
+                          child: const Icon(
+                            Icons.camera_alt,
+                            color: Colors.white,
+                            size: 22,
                           ),
-                          divider(),
-                          statItem(
-                            Icons.store,
-                            postCount.toString(),
-                            "Postingan",
-                          ),
-                        ]
-                      : [
-                          statItem(
-                            Icons.favorite,
-                            favoriteCount.toString(),
-                            "Favorit",
-                          ),
-                          divider(),
-                          statItem(
-                            Icons.star,
-                            reviewCount.toString(),
-                            "Review",
-                          ),
-                        ],
-                ),
-              ),
-
-              Divider(color: Colors.brown.shade200),
-
-              const SizedBox(height: 18),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  children: [
-                    menuItem(
-                      Icons.favorite,
-                      "Cafe Favorit",
-                      "Lihat cafe yang sudah kamu simpan",
-                      () {
-                          Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const FavoriteScreen(showBackButton: true),
-                          ),
-                        );
-                      },
+                        ),
+                      ],
                     ),
-                    menuItem(
-                      Icons.rate_review,
-                      "Review Saya",
-                      "Lihat review terakhir yang pernah kamu tulis",
-                      () {
-                        showLatestReview();
-                      },
-                    ),
-                    menuItem(
-                      Icons.map,
-                      "Cari Cafe Terdekat",
-                      "Temukan cafe di sekitar lokasimu",
-                      () {
-                          Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const MapScreen(showBackButton: true),
-                          ),
-                        );
-                      },
-                    ),
-                    if (isOwner)
-                      menuItem(
-                        Icons.store,
-                        "Kelola Cafe Saya",
-                        "Lihat cafe yang kamu kelola",
-                        () {
-                          showMyCafe();
-                        },
-                      ),
-                  ],
-                ),
-              ),
+                  ),
 
-              const SizedBox(height: 30),
+                  const SizedBox(height: 8),
 
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 25),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 58,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: brown,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18),
-                      ),
+                  Text(
+                    "Ketuk foto untuk mengganti",
+                    style: TextStyle(
+                      color: subTextColor,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
                     ),
-                    onPressed: logout,
-                    child: const Text(
-                      "Keluar",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                  ),
+
+                  const SizedBox(height: 18),
+
+                  Text(
+                    name,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: textColor,
+                    ),
+                  ),
+
+                  const SizedBox(height: 5),
+
+                  Text(
+                    email,
+                    style: TextStyle(
+                      color: subTextColor,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color:
+                          isOwner ? Colors.amber.shade700 : Colors.green.shade600,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      isOwner ? "Pemilik Cafe" : "Customer",
+                      style: const TextStyle(
                         color: Colors.white,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                ),
-              ),
 
-              const SizedBox(height: 30),
-            ],
-          ),
+                  const SizedBox(height: 16),
+
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 20),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: brown,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.local_cafe,
+                          color: Colors.white,
+                          size: 28,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            isOwner
+                                ? "Kelola dan promosikan cafe milikmu."
+                                : "Temukan dan simpan cafe favoritmu.",
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  Divider(color: dividerColor),
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 15,
+                      vertical: 14,
+                    ),
+                    child: Row(
+                      children: isOwner
+                          ? [
+                              statItem(
+                                Icons.favorite,
+                                favoriteCount.toString(),
+                                "Favorit",
+                                textColor: textColor,
+                              ),
+                              divider(dividerColor),
+                              statItem(
+                                Icons.star,
+                                reviewCount.toString(),
+                                "Review",
+                                textColor: textColor,
+                              ),
+                              divider(dividerColor),
+                              statItem(
+                                Icons.store,
+                                postCount.toString(),
+                                "Postingan",
+                                textColor: textColor,
+                              ),
+                            ]
+                          : [
+                              statItem(
+                                Icons.favorite,
+                                favoriteCount.toString(),
+                                "Favorit",
+                                textColor: textColor,
+                              ),
+                              divider(dividerColor),
+                              statItem(
+                                Icons.star,
+                                reviewCount.toString(),
+                                "Review",
+                                textColor: textColor,
+                              ),
+                            ],
+                    ),
+                  ),
+
+                  Divider(color: dividerColor),
+
+                  const SizedBox(height: 18),
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      children: [
+                        menuItem(
+                          Icons.favorite,
+                          "Cafe Favorit",
+                          "Lihat cafe yang sudah kamu simpan",
+                          () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const FavoriteScreen(showBackButton: true),
+                              ),
+                            );
+                          },
+                          cardColor: cardColor,
+                          textColor: textColor,
+                          subTextColor: subTextColor,
+                        ),
+                        menuItem(
+                          Icons.rate_review,
+                          "Review Saya",
+                          "Lihat review terakhir yang pernah kamu tulis",
+                          () {
+                            showLatestReview();
+                          },
+                          cardColor: cardColor,
+                          textColor: textColor,
+                          subTextColor: subTextColor,
+                        ),
+                        menuItem(
+                          Icons.map,
+                          "Cari Cafe Terdekat",
+                          "Temukan cafe di sekitar lokasimu",
+                          () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const MapScreen(showBackButton: true),
+                              ),
+                            );
+                          },
+                          cardColor: cardColor,
+                          textColor: textColor,
+                          subTextColor: subTextColor,
+                        ),
+
+                        darkModeTile(
+                          cardColor: softCardColor,
+                          textColor: textColor,
+                          subTextColor: subTextColor,
+                        ),
+
+                        if (isOwner)
+                          menuItem(
+                            Icons.store,
+                            "Kelola Cafe Saya",
+                            "Lihat cafe yang kamu kelola",
+                            () {
+                              showMyCafe();
+                            },
+                            cardColor: cardColor,
+                            textColor: textColor,
+                            subTextColor: subTextColor,
+                          ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 25),
+                    child: SizedBox(
+                      width: double.infinity,
+                      height: 58,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: brown,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                        onPressed: logout,
+                        child: const Text(
+                          "Keluar",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget divider() {
+  Widget divider(Color color) {
     return Container(
       height: 58,
       width: 1,
-      color: Colors.brown.shade200,
+      color: color,
     );
   }
 
-  Widget statItem(IconData icon, String value, String title) {
+  Widget statItem(
+    IconData icon,
+    String value,
+    String title, {
+    required Color textColor,
+  }) {
     return Expanded(
       child: Column(
         children: [
-          Icon(icon, size: 34, color: brown),
+          Icon(icon, size: 34, color: textColor),
           const SizedBox(height: 8),
           Text(
             value,
-            style: const TextStyle(
-              color: brown,
+            style: TextStyle(
+              color: textColor,
               fontWeight: FontWeight.bold,
               fontSize: 18,
             ),
@@ -577,8 +807,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: brown,
+            style: TextStyle(
+              color: textColor,
               fontWeight: FontWeight.w600,
               fontSize: 13,
             ),
@@ -588,38 +818,82 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  Widget darkModeTile({
+    required Color cardColor,
+    required Color textColor,
+    required Color subTextColor,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: SwitchListTile(
+        activeColor: brown,
+        secondary: Icon(
+          themeController.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+          color: textColor,
+        ),
+        title: Text(
+          "Dark Mode",
+          style: TextStyle(
+            color: textColor,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        subtitle: Text(
+          themeController.isDarkMode
+              ? "Mode gelap sedang aktif"
+              : "Mode terang sedang aktif",
+          style: TextStyle(
+            color: subTextColor,
+            fontSize: 12,
+          ),
+        ),
+        value: themeController.isDarkMode,
+        onChanged: (value) {
+          themeController.toggleTheme(value);
+        },
+      ),
+    );
+  }
+
   Widget menuItem(
     IconData icon,
     String title,
     String subtitle,
-    VoidCallback onTap,
-  ) {
+    VoidCallback onTap, {
+    required Color cardColor,
+    required Color textColor,
+    required Color subTextColor,
+  }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardColor,
         borderRadius: BorderRadius.circular(16),
       ),
       child: ListTile(
-        leading: Icon(icon, color: brown),
+        leading: Icon(icon, color: textColor),
         title: Text(
           title,
-          style: const TextStyle(
-            color: brown,
+          style: TextStyle(
+            color: textColor,
             fontWeight: FontWeight.bold,
           ),
         ),
         subtitle: Text(
           subtitle,
           style: TextStyle(
-            color: Colors.brown.shade400,
+            color: subTextColor,
             fontSize: 12,
           ),
         ),
-        trailing: const Icon(
+        trailing: Icon(
           Icons.arrow_forward_ios,
           size: 16,
-          color: brown,
+          color: textColor,
         ),
         onTap: onTap,
       ),

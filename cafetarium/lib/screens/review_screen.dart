@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -27,8 +28,8 @@ class _ReviewScreenState extends State<ReviewScreen> {
   bool _isSubmitting = false;
 
   static const Color primaryBrown = Color(0xff9b6a43);
-  static const Color bgColor = Color(0xfff3e8ec);
-  static const Color boxColor = Color(0xffeee4e8);
+  static const Color lightBgColor = Color(0xfff3e8ec);
+  static const Color lightBoxColor = Color(0xffeee4e8);
 
   Future<void> _pickImage() async {
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
@@ -57,6 +58,47 @@ class _ReviewScreenState extends State<ReviewScreen> {
     });
   }
 
+  Future<void> _sendReviewNotification({
+    required String cafeName,
+    required String ownerId,
+    required String reviewerName,
+  }) async {
+    try {
+      final ownerDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(ownerId)
+          .get();
+
+      final ownerToken = ownerDoc.data()?['fcmToken'];
+
+      if (ownerToken == null || ownerToken.toString().isEmpty) {
+        debugPrint('Owner belum punya FCM token');
+        return;
+      }
+
+      const String vercelUrl =
+          'https://cafetarium-cloud.vercel.app/send-to-device';
+
+      final response = await http.post(
+        Uri.parse(vercelUrl),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'token': ownerToken,
+          'title': '⭐ Review Baru!',
+          'body': '$reviewerName memberi review untuk $cafeName.',
+          'senderName': 'Cafetarium',
+        }),
+      );
+
+      debugPrint('Review notif status: ${response.statusCode}');
+      debugPrint('Review notif response: ${response.body}');
+    } catch (e) {
+      debugPrint('Gagal mengirim notif review: $e');
+    }
+  }
+
   Future<void> _submitReview() async {
     if (_selectedRating == 0) {
       _showMessage('Silakan pilih rating terlebih dahulu');
@@ -78,8 +120,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
           .doc(widget.cafeId);
 
       final user = FirebaseAuth.instance.currentUser;
-      print('CURRENT USER: ${user?.uid}');
-      print('CURRENT EMAIL: ${user?.email}');
+
+      debugPrint('CURRENT USER: ${user?.uid}');
+      debugPrint('CURRENT EMAIL: ${user?.email}');
 
       if (user == null) {
         _showMessage('Silakan login terlebih dahulu');
@@ -91,15 +134,23 @@ class _ReviewScreenState extends State<ReviewScreen> {
           .doc(user.uid)
           .get();
 
+      final userData = userDoc.data() ?? {};
+
       final String userName =
-          userDoc.data()?['fullName'] ??
+          userData['fullName'] ??
+          userData['username'] ??
+          userData['name'] ??
           user.displayName ??
           user.email?.split('@').first ??
           'User';
 
+      final String userProfileImage =
+          userData['profileImage']?.toString() ?? '';
+
       await cafeRef.collection('reviews').add({
         'userId': user.uid,
         'userName': userName,
+        'userProfileImage': userProfileImage,
         'rating': _selectedRating,
         'comment': _commentController.text.trim(),
         'image': _base64Image,
@@ -109,17 +160,20 @@ class _ReviewScreenState extends State<ReviewScreen> {
       await _updateCafeRating(cafeRef);
 
       final cafeDoc = await cafeRef.get();
-      final cafeData = cafeDoc.data() as Map<String, dynamic>;
 
-      final String cafeName = cafeData['name'] ?? 'Cafe';
-      final String ownerId = cafeData['ownerId'] ?? '';
+      if (cafeDoc.exists) {
+        final cafeData = cafeDoc.data() as Map<String, dynamic>;
 
-      if (ownerId.isNotEmpty && ownerId != user.uid) {
-        await _sendReviewNotification(
-          cafeName: cafeName,
-          ownerId: ownerId,
-          reviewerName: userName,
-        );
+        final String cafeName = cafeData['name'] ?? 'Cafe';
+        final String ownerId = cafeData['ownerId'] ?? '';
+
+        if (ownerId.isNotEmpty && ownerId != user.uid) {
+          await _sendReviewNotification(
+            cafeName: cafeName,
+            ownerId: ownerId,
+            reviewerName: userName,
+          );
+        }
       }
 
       if (!mounted) return;
@@ -163,9 +217,9 @@ class _ReviewScreenState extends State<ReviewScreen> {
   void _showMessage(String message) {
     if (!mounted) return;
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
   }
 
   Widget _buildStarRating() {
@@ -190,45 +244,6 @@ class _ReviewScreenState extends State<ReviewScreen> {
     );
   }
 
-  Future<void> _sendReviewNotification({
-    required String cafeName,
-    required String ownerId,
-    required String reviewerName,
-  }) async {
-    try {
-      final ownerDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(ownerId)
-          .get();
-
-      final ownerToken = ownerDoc.data()?['fcmToken'];
-
-      if (ownerToken == null || ownerToken.toString().isEmpty) {
-        debugPrint('Owner belum punya FCM token');
-        return;
-      }
-
-      const String vercelUrl =
-          'https://cafetarium-cloud.vercel.app/send-to-device';
-
-      final response = await http.post(
-        Uri.parse(vercelUrl),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'token': ownerToken,
-          'title': '⭐ Review Baru!',
-          'body': '$reviewerName memberi review untuk $cafeName.',
-          'senderName': 'Cafetarium',
-        }),
-      );
-
-      debugPrint('Review notif status: ${response.statusCode}');
-      debugPrint('Review notif response: ${response.body}');
-    } catch (e) {
-      debugPrint('Gagal mengirim notif review: $e');
-    }
-  }
-
   @override
   void dispose() {
     _commentController.dispose();
@@ -237,6 +252,16 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final Color bgColor = isDark ? const Color(0xff121212) : lightBgColor;
+    final Color boxColor = isDark ? const Color(0xff1E1E1E) : lightBoxColor;
+    final Color fieldColor = isDark ? const Color(0xff242424) : Colors.white;
+    final Color uploadBoxColor = isDark ? const Color(0xff2A2A2A) : Colors.grey;
+    final Color textColor = isDark ? Colors.white : Colors.black87;
+    final Color hintColor = isDark ? Colors.white60 : Colors.grey;
+    final Color borderColor = isDark ? Colors.white12 : Colors.transparent;
+
     return Scaffold(
       backgroundColor: bgColor,
       body: SafeArea(
@@ -286,6 +311,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                       decoration: BoxDecoration(
                         color: boxColor,
                         borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: borderColor),
                       ),
                       child: GestureDetector(
                         onTap: _pickImage,
@@ -293,7 +319,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                           height: 82,
                           width: double.infinity,
                           decoration: BoxDecoration(
-                            color: Colors.grey,
+                            color: uploadBoxColor,
                             borderRadius: BorderRadius.circular(9),
                           ),
                           child: _image != null
@@ -305,20 +331,20 @@ class _ReviewScreenState extends State<ReviewScreen> {
                                     width: double.infinity,
                                   ),
                                 )
-                              : const Column(
+                              : Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Icon(
                                       Icons.add,
                                       size: 34,
-                                      color: Colors.black,
+                                      color: textColor,
                                     ),
-                                    SizedBox(height: 2),
+                                    const SizedBox(height: 2),
                                     Text(
                                       'Unggah Foto',
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        color: Colors.black,
+                                        color: textColor,
                                       ),
                                     ),
                                   ],
@@ -340,15 +366,18 @@ class _ReviewScreenState extends State<ReviewScreen> {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: fieldColor,
                         borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: borderColor),
                       ),
                       child: TextField(
                         controller: _commentController,
                         maxLines: 6,
-                        decoration: const InputDecoration(
+                        style: TextStyle(color: textColor),
+                        decoration: InputDecoration(
                           border: InputBorder.none,
                           hintText: 'Tulis Komentar.....',
+                          hintStyle: TextStyle(color: hintColor),
                         ),
                       ),
                     ),
@@ -361,6 +390,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
 
             Container(
               padding: const EdgeInsets.fromLTRB(22, 10, 22, 12),
+              color: bgColor,
               child: SizedBox(
                 width: double.infinity,
                 height: 52,
@@ -368,6 +398,7 @@ class _ReviewScreenState extends State<ReviewScreen> {
                   onPressed: _isSubmitting ? null : _submitReview,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryBrown,
+                    disabledBackgroundColor: primaryBrown.withOpacity(0.5),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(9),
                     ),

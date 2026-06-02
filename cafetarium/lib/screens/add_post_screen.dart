@@ -33,8 +33,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
   double? _longitude;
 
   static const Color primaryBrown = Color(0xff9b6a43);
-  static const Color bgColor = Color(0xfff3e8ec);
-  static const Color boxColor = Color(0xffeee4e8);
+  static const Color lightBgColor = Color(0xfff3e8ec);
+  static const Color lightBoxColor = Color(0xffeee4e8);
 
   Future<void> _pickImage(ImageSource source) async {
     try {
@@ -256,9 +256,13 @@ class _AddPostScreenState extends State<AddPostScreen> {
   }
 
   void _showImageSourceDialog() {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color sheetColor = isDark ? const Color(0xff1E1E1E) : lightBgColor;
+    final Color textColor = isDark ? Colors.white : Colors.black87;
+
     showModalBottomSheet(
       context: context,
-      backgroundColor: bgColor,
+      backgroundColor: sheetColor,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
       ),
@@ -268,7 +272,10 @@ class _AddPostScreenState extends State<AddPostScreen> {
             children: [
               ListTile(
                 leading: const Icon(Icons.camera_alt, color: primaryBrown),
-                title: const Text('Ambil dari Kamera'),
+                title: Text(
+                  'Ambil dari Kamera',
+                  style: TextStyle(color: textColor),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   _pickImage(ImageSource.camera);
@@ -276,7 +283,10 @@ class _AddPostScreenState extends State<AddPostScreen> {
               ),
               ListTile(
                 leading: const Icon(Icons.photo_library, color: primaryBrown),
-                title: const Text('Pilih dari Galeri'),
+                title: Text(
+                  'Pilih dari Galeri',
+                  style: TextStyle(color: textColor),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   _pickImage(ImageSource.gallery);
@@ -297,22 +307,27 @@ class _AddPostScreenState extends State<AddPostScreen> {
     );
   }
 
-  Widget _sectionTitle(String title, String subtitle) {
+  Widget _sectionTitle(
+    String title,
+    String subtitle, {
+    required Color textColor,
+    required Color subTextColor,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 15,
             fontWeight: FontWeight.bold,
-            color: Colors.black87,
+            color: textColor,
           ),
         ),
         const SizedBox(height: 3),
         Text(
           subtitle,
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
+          style: TextStyle(fontSize: 12, color: subTextColor),
         ),
         const SizedBox(height: 8),
       ],
@@ -329,6 +344,16 @@ class _AddPostScreenState extends State<AddPostScreen> {
   @override
   Widget build(BuildContext context) {
     final descriptionLength = _descriptionController.text.length;
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final Color bgColor = isDark ? const Color(0xff121212) : lightBgColor;
+    final Color boxColor = isDark ? const Color(0xff1E1E1E) : lightBoxColor;
+    final Color fieldColor = isDark ? const Color(0xff242424) : Colors.white;
+    final Color textColor = isDark ? Colors.white : Colors.black87;
+    final Color subTextColor = isDark ? Colors.white70 : Colors.grey;
+    final Color borderColor = isDark ? Colors.white24 : Colors.grey.shade300;
+    final Color uploadBoxColor = isDark ? const Color(0xff2A2A2A) : Colors.grey;
+    final Color hintColor = isDark ? Colors.white60 : Colors.grey;
 
     return Scaffold(
       backgroundColor: bgColor,
@@ -386,7 +411,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
                           height: 95,
                           width: double.infinity,
                           decoration: BoxDecoration(
-                            color: Colors.grey,
+                            color: uploadBoxColor,
                             borderRadius: BorderRadius.circular(9),
                           ),
                           child: _image != null
@@ -398,15 +423,20 @@ class _AddPostScreenState extends State<AddPostScreen> {
                                     width: double.infinity,
                                   ),
                                 )
-                              : const Column(
+                              : Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Icon(Icons.add, size: 38),
-                                    SizedBox(height: 2),
+                                    Icon(
+                                      Icons.add,
+                                      size: 38,
+                                      color: textColor,
+                                    ),
+                                    const SizedBox(height: 2),
                                     Text(
                                       'Unggah Foto',
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
+                                        color: textColor,
                                       ),
                                     ),
                                   ],
@@ -423,22 +453,28 @@ class _AddPostScreenState extends State<AddPostScreen> {
                         _sectionTitle(
                           'Nama Cafe',
                           'Tulis nama cafe tanpa kata "cafe" di depan',
+                          textColor: textColor,
+                          subTextColor: subTextColor,
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 14),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: fieldColor,
                             borderRadius: BorderRadius.circular(7),
-                            border: Border.all(color: Colors.grey.shade300),
+                            border: Border.all(color: borderColor),
                           ),
                           child: TextField(
                             controller: _cafeNameController,
                             maxLength: 40,
-                            decoration: const InputDecoration(
+                            style: TextStyle(color: textColor),
+                            decoration: InputDecoration(
                               border: InputBorder.none,
                               counterText: '',
                               hintText: 'Contoh: Senja Coffee',
-                              hintStyle: TextStyle(fontSize: 13),
+                              hintStyle: TextStyle(
+                                fontSize: 13,
+                                color: hintColor,
+                              ),
                             ),
                           ),
                         ),
@@ -459,8 +495,12 @@ class _AddPostScreenState extends State<AddPostScreen> {
                       ),
                       child: _isGenerating
                           ? Shimmer.fromColors(
-                              baseColor: Colors.grey.shade300,
-                              highlightColor: Colors.grey.shade100,
+                              baseColor: isDark
+                                  ? Colors.grey.shade800
+                                  : Colors.grey.shade300,
+                              highlightColor: isDark
+                                  ? Colors.grey.shade700
+                                  : Colors.grey.shade100,
                               child: Container(
                                 height: 90,
                                 width: double.infinity,
@@ -474,11 +514,13 @@ class _AddPostScreenState extends State<AddPostScreen> {
                               controller: _descriptionController,
                               maxLength: 250,
                               maxLines: 5,
+                              style: TextStyle(color: textColor),
                               onChanged: (_) => setState(() {}),
                               textCapitalization: TextCapitalization.sentences,
-                              decoration: const InputDecoration(
+                              decoration: InputDecoration(
                                 hintText:
                                     'Tulis caption menarik tentang cafe kamu',
+                                hintStyle: TextStyle(color: hintColor),
                                 border: InputBorder.none,
                                 counterText: '',
                               ),
@@ -489,7 +531,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
                       alignment: Alignment.centerRight,
                       child: Text(
                         '$descriptionLength/250',
-                        style: const TextStyle(color: Colors.grey),
+                        style: TextStyle(color: subTextColor),
                       ),
                     ),
 
@@ -501,6 +543,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
                         _sectionTitle(
                           'Lokasi Cafe',
                           'Pilih titik lokasi cafe melalui peta',
+                          textColor: textColor,
+                          subTextColor: subTextColor,
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(
@@ -508,9 +552,9 @@ class _AddPostScreenState extends State<AddPostScreen> {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color: fieldColor,
                             borderRadius: BorderRadius.circular(7),
-                            border: Border.all(color: Colors.grey.shade300),
+                            border: Border.all(color: borderColor),
                           ),
                           child: Row(
                             children: [
@@ -521,7 +565,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
                                       : 'Lokasi berhasil dipilih',
                                   style: TextStyle(
                                     color: _latitude == null
-                                        ? Colors.grey
+                                        ? hintColor
                                         : primaryBrown,
                                     fontSize: 13,
                                   ),
@@ -552,6 +596,8 @@ class _AddPostScreenState extends State<AddPostScreen> {
                         onPressed: _isUploading ? null : _submitPost,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: primaryBrown,
+                          disabledBackgroundColor:
+                              primaryBrown.withOpacity(0.5),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(9),
                           ),

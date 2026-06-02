@@ -15,6 +15,9 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   Position? userPosition;
 
+  static const Color primaryBrown = Color(0xff9b6a43);
+  static const Color lightBgColor = Color(0xfff3e8ec);
+
   @override
   void initState() {
     super.initState();
@@ -57,9 +60,18 @@ class _HomeScreenState extends State<HomeScreen> {
         1000;
   }
 
-  Widget buildCafeImage(String? imageBase64) {
+  Widget buildCafeImage(String? imageBase64, bool isDark) {
     if (imageBase64 == null || imageBase64.isEmpty) {
-      return const SizedBox.shrink();
+      return Container(
+        width: 78,
+        height: 78,
+        color: isDark ? const Color(0xff2A2A2A) : Colors.grey.shade400,
+        child: Icon(
+          Icons.local_cafe,
+          size: 34,
+          color: isDark ? Colors.white70 : Colors.black87,
+        ),
+      );
     }
 
     return Image.memory(
@@ -72,8 +84,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final Color bgColor = isDark ? const Color(0xff121212) : lightBgColor;
+    final Color cardColor =
+        isDark ? const Color(0xff1E1E1E) : Colors.grey.shade300;
+    final Color searchColor =
+        isDark ? const Color(0xff1E1E1E) : Colors.grey.shade300;
+    final Color textColor = isDark ? Colors.white : Colors.black87;
+    final Color subTextColor = isDark ? Colors.white70 : Colors.grey.shade700;
+    final Color emptyTextColor = isDark ? Colors.white70 : Colors.black87;
+
     return Scaffold(
-      backgroundColor: const Color(0xfff3e8ec),
+      backgroundColor: bgColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -82,7 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 14),
               decoration: BoxDecoration(
-                color: const Color(0xff9b6a43),
+                color: primaryBrown,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Center(
@@ -109,16 +132,24 @@ class _HomeScreenState extends State<HomeScreen> {
                     vertical: 13,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
+                    color: searchColor,
                     borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isDark ? Colors.white12 : Colors.transparent,
+                    ),
                   ),
-                  child: const Row(
+                  child: Row(
                     children: [
-                      Icon(Icons.search, size: 22),
-                      SizedBox(width: 10),
+                      Icon(
+                        Icons.search,
+                        size: 22,
+                        color: textColor,
+                      ),
+                      const SizedBox(width: 10),
                       Text(
                         'Search Cafes..',
                         style: TextStyle(
+                          color: textColor,
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                         ),
@@ -138,18 +169,26 @@ class _HomeScreenState extends State<HomeScreen> {
                     .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
+                    return const Center(
+                      child: CircularProgressIndicator(color: primaryBrown),
+                    );
                   }
 
                   if (snapshot.hasError) {
                     return Center(
-                      child: Text('Firestore Error: ${snapshot.error}'),
+                      child: Text(
+                        'Firestore Error: ${snapshot.error}',
+                        style: TextStyle(color: emptyTextColor),
+                      ),
                     );
                   }
 
                   if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return const Center(
-                      child: Text('Belum ada cafe yang diposting'),
+                    return Center(
+                      child: Text(
+                        'Belum ada cafe yang diposting',
+                        style: TextStyle(color: emptyTextColor),
+                      ),
                     );
                   }
 
@@ -185,14 +224,19 @@ class _HomeScreenState extends State<HomeScreen> {
                           margin: const EdgeInsets.only(bottom: 14),
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.grey.shade300,
+                            color: cardColor,
                             borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isDark
+                                  ? Colors.white12
+                                  : Colors.transparent,
+                            ),
                           ),
                           child: Row(
                             children: [
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(9),
-                                child: buildCafeImage(imageBase64),
+                                child: buildCafeImage(imageBase64, isDark),
                               ),
 
                               const SizedBox(width: 14),
@@ -205,7 +249,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                       name,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
+                                      style: TextStyle(
+                                        color: textColor,
                                         fontWeight: FontWeight.bold,
                                         fontSize: 16,
                                       ),
@@ -220,7 +265,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
                                           fontSize: 12,
-                                          color: Colors.grey.shade700,
+                                          color: subTextColor,
                                         ),
                                       ),
 
@@ -231,14 +276,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                         const Icon(
                                           Icons.location_on,
                                           size: 15,
-                                          color: Color(0xff9b6a43),
+                                          color: primaryBrown,
                                         ),
                                         const SizedBox(width: 3),
                                         Text(
                                           userPosition == null
                                               ? 'Mengambil lokasi...'
                                               : '${distance.toStringAsFixed(1)} km',
-                                          style: const TextStyle(
+                                          style: TextStyle(
+                                            color: subTextColor,
                                             fontSize: 12,
                                             fontWeight: FontWeight.w500,
                                           ),
@@ -262,7 +308,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                   const SizedBox(height: 3),
                                   Text(
                                     rating.toStringAsFixed(1),
-                                    style: const TextStyle(
+                                    style: TextStyle(
+                                      color: textColor,
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14,
                                     ),
