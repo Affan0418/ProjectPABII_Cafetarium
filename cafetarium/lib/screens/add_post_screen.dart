@@ -82,7 +82,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
       final imageBytes = await _image!.readAsBytes();
       final base64Image = base64Encode(imageBytes);
 
-      const apiKey = 'AQ.Ab8RN6I-5qd_ZuC4of4fyuijppBaE-cpd0XVNK0hwDnZxEYSYQ';
+      const apiKey = 'API_key';
       const url =
           'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent';
 
@@ -142,7 +142,7 @@ class _AddPostScreenState extends State<AddPostScreen> {
   Future<void> _sendNotificationToTopic(String cafeName) async {
     try {
       const String vercelUrl =
-          'https://cafetarium-cloud.vercel.app/send-to-topic';
+          'LINK_VERCEL';
 
       final response = await http.post(
         Uri.parse(vercelUrl),
